@@ -7,5 +7,8 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Jan Vogt | geOps",
-  "license": "license.txt"
+  "license": "license.txt",
+  "dependencies": {
+    "openlayers": "~3.5.0"
+  }
 }
