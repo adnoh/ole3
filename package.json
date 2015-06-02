@@ -1,0 +1,11 @@
+{
+  "name": "ole3",
+  "version": "0.0.0",
+  "description": "Open Layers Editor 3",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Jan Vogt | geOps",
+  "license": "license.txt"
+}
