@@ -13,6 +13,7 @@
   "author": "Jan Vogt | geOps",
   "license": "license.txt",
   "dependencies": {
-    "openlayers": "~3.5.0"
+    "openlayers": "~3.5.0",
+    "bezier-js": "~1.0.4"
   }
 }

@@ -9,6 +9,8 @@ goog.require('ol.layer.Vector');
 goog.require('ol.source.Vector');
 goog.require('ol.interaction.Modify');
 goog.require('ol.Collection');
+goog.require('ole3.interaction.BezierModify');
+
 
 /**
  * @type {ol.source.Vector}
@@ -52,7 +54,7 @@ ole3.map.addLayer(ole3.layer);
 ole3.edit = function() {
     ole3.map.removeInteraction(ole3.draw);
     ole3.map.addInteraction(
-        new ol.interaction.Modify({
+        new ole3.interaction.BezierModify({
             features: new ol.Collection(ole3.source.getFeatures())
         })
     );
