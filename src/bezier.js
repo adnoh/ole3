@@ -48,13 +48,22 @@ ole3.feature.BezierString.prototype.splitBezier = function(bezier, t) {
       break;
     }
   }
-  this.beziers_.removeAt(i);
   var newBeziers = bezier.split(t);
+  this.beziers_.removeAt(i);
   this.beziers_.insertAt(i, newBeziers[1]);
   this.beziers_.insertAt(i, newBeziers[0]);
+  var predecessor = bezier.getPredecessor();
+  if (!goog.isNull(predecessor)) {
+    newBeziers[0].setPredecessor(predecessor);
+  }
+  var sucessor = bezier.getSucessor();
+  if (!goog.isNull(sucessor)) {
+    sucessor.setPredecessor(newBeziers[1]);
+  }
   this.ignoreUpdate_ = false;
   this.update_();
-}
+  return newBeziers;
+};
 
 ole3.feature.BezierString.prototype.combineBezier = function(bezier1, bezier2) {
   var array = this.beziers_.getArray();
@@ -162,11 +171,13 @@ ole3.feature.BezierString.prototype.controlPointsForSegment_ =
  */
 ole3.feature.Bezier = function(controlPoints, coordinates) {
   goog.base(this);
-  this.set('coordinates', coordinates);
   this.controlPoints_ = controlPoints;
   this.predecessor_ = null;
   this.sucessor_ = null;
-
+  if (!goog.isDef(coordinates)) {
+    coordinates = this.getLUT_();
+  }
+  this.set('coordinates', coordinates);
   this.createOrUpdateHandles_();
 };
 goog.inherits(ole3.feature.Bezier, ol.Object);
@@ -174,8 +185,9 @@ goog.inherits(ole3.feature.Bezier, ol.Object);
 ole3.feature.Bezier.prototype.split = function(t) {
   var bezierJS = this.getBezierJS_();
   newCurves = bezierJS.split(t);
-  var newBeziers = goog.array.map(newCurves, this.fromBezierJS_, this);
-  newBezier[1].setPredecessor(newBezier[0]);
+  var newBeziers = [this.fromBezierJS_(newCurves.left),
+      this.fromBezierJS_(newCurves.right)];
+  newBeziers[1].setPredecessor(newBeziers[0]);
   return newBeziers;
 };
 
@@ -185,7 +197,9 @@ ole3.feature.Bezier.prototype.controlPoints = function() {
 
 ole3.feature.Bezier.prototype.setPredecessor = function(bezier) {
   this.predecessor_ = bezier;
-  bezier.setSucessor(this);
+  if (!goog.isNull(bezier)) {
+    bezier.setSucessor(this);
+  }
 };
 
 ole3.feature.Bezier.prototype.getPredecessor = function() {
@@ -245,8 +259,8 @@ ole3.feature.Bezier.prototype.closestCurvePoint = function(coordinate) {
   var sqDistFn = ol.coordinate.squaredDistance;
   var segmentLength = sqDistFn.apply(null,
       lutPoints.slice(closest.ind, closest.ind + 2));
-  var lengthToClosest = sqDistFn.apply(null,
-      lutPoints[closest.ind], closestPoints[closest.ind]);
+  var lengthToClosest = sqDistFn(lutPoints[closest.ind],
+      closestPoints[closest.ind]);
   var parOnSegment = lengthToClosest / segmentLength;
   var parameter = (closest.ind + parOnSegment) * 1 / PRECISION;
   return {
@@ -291,13 +305,13 @@ ole3.feature.Bezier.prototype.getClosestCoordinateIndex_ =
     ind: closestIndex,
     sqDist: minSqDist
   };
-}
+};
 
 ole3.feature.Bezier.prototype.getLUT_ = function() {
   var PRECISION = 100;
   var bezierJS = this.getBezierJS_();
   return goog.array.map(bezierJS.getLUT(PRECISION), this.fromBezierJSCoord_);
-}
+};
 
 ole3.feature.Bezier.prototype.getBezierJS_ = function() {
   var coordObjs = goog.array.map(this.controlPoints_,
@@ -306,8 +320,8 @@ ole3.feature.Bezier.prototype.getBezierJS_ = function() {
 };
 
 ole3.feature.Bezier.prototype.fromBezierJS_ = function(c) {
-  return new this.prototype.constructor(
-      goog.array.map(c.points, this.fromBezierJSCoord_));
+  var controlPoints = goog.array.map(c.points, this.fromBezierJSCoord_);
+  return new this.constructor(controlPoints);
 };
 
 ole3.feature.Bezier.prototype.toBezierJSCoord_ = function(coordinate) {
@@ -321,8 +335,8 @@ ole3.feature.Bezier.prototype.fromBezierJSCoord_ = function(bezierJSCoord) {
 ole3.feature.Bezier.prototype.createOrUpdateHandles_ = function() {
   var cps = this.controlPoints_;
   if (goog.isDef(this.handles_)) {
-    this.handles_[0].setGeometry(new ol.geom.LineString(cps.slice(0, 2)))
-    this.handles_[1].setGeometry(new ol.geom.LineString(cps.slice(2, 4)))
+    this.handles_[0].setGeometry(new ol.geom.LineString(cps.slice(0, 2)));
+    this.handles_[1].setGeometry(new ol.geom.LineString(cps.slice(2, 4)));
   } else {
     this.handles_ = [];
     this.handles_.push(this.newHandleFeature_(cps.slice(0, 2)));
@@ -333,75 +347,3 @@ ole3.feature.Bezier.prototype.createOrUpdateHandles_ = function() {
 ole3.feature.Bezier.prototype.newHandleFeature_ = function(start, end) {
   return new ol.Feature(new ol.geom.LineString(start, end));
 };
-
-/**
- * Get the closest coordinate to the given coordinate on the bezier curve.
- * @param  {ole3.Bezier} bezier Bezier curve on which the closest coordinate
- *                              should be
- * @param  {ol.Coordinate} coordinate Coordinate to which the closest point is
- *                                    requested
- * @return {ol.Coordinate} The closes coordinate on the bezier curve.
- */
-// ole3.bezier.closestOnCurveToCoordinate = function(bezier, coordinate) {
-  
-// };
-
-// ole3.bezier.closestHandleToCoordinate = function(bezier, coordinate) {
-//   var closestPoints = [
-//     ole3.bezier.closestOnCurveToCoordinate(bezier, coordinate),
-//     bezier[1],
-//     bezier[2]
-//   ];
-//   closestPoints.sort(ole3.bezier.compareByDistanceTo(coordinate));
-//   return closestPoints[0];
-// }
-
-// ole3.bezier.getClosestHandle = function(bezier, coordinate) {
-//   var closestOnCurve = closestOnCurveToCoordinate(bezier, coordinate);
-
-// }
-
-
-
-// ole3.bezier.fromBezierJS = function(bezierJS) {
-//   return goog.array.map(bezierJS.points, ole3.bezier.bezierJSCoordAsCoord);
-// };
-
-// ole3.bezier.coordAsBezierJSCoord = function(coordinate) {
-//   return {
-//       x: coordinate[0],
-//       y: coordinate[1]
-//     };
-// };
-
-// ole3.bezier.bezierJSCoordAsCoord = function(bezierJSCoord) {
-//   return [bezierJSCoord.x, bezierJSCoord.y];
-// };
-
-// ole3.bezier.compareByDistanceTo = function(coordinate) {
-//   return function(a, b) {
-//     return ol.coordinate.squaredDistance(a, coordinate) -
-//         ol.coordinate.squaredDistance(b, coordinate);
-//   };
-// };
-
-// ole3.bezier.squaredDistanceTo = function(coordinate) {
-//   return function(a) {
-//     return ol.coordinate.squaredDistance(a, coordinate);
-//   }
-// }
-
-// ole3.bezier.indexOfSmallest = function(a) {
-//  var lowest = 0;
-//  for (var i = 1; i < a.length; i++) {
-//   if (a[i] < a[lowest]) lowest = i;
-//  }
-//  return lowest;
-// };
-
-// ole3.bezier.handleDistanceToFn = function(coordinate) {
-//   closestHandleFn = ole3.bezier.closestHandleToCoordinate;
-//   return function(bezier) {
-//     return closestHandleFn(bezier, coordinate);
-//   }
-// };
