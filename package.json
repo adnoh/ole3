@@ -4,7 +4,10 @@
   "description": "Open Layers Editor 3",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "postinstall": "node ./scripts/closurifyDeps.js",
+    "serve": "node node_modules/openlayers/node_modules/.bin/closure-util serve config.json",
+    "build": "node node_modules/openlayers/node_modules/.bin/closure-util build config.json dist/app.js"
   },
   "repository": {
     "type": "git",
@@ -15,5 +18,13 @@
   "dependencies": {
     "openlayers": "~3.5.0",
     "bezier-js": "~1.0.4"
+  },
+  "config": {
+    "nonClosureDeps": {
+      "pomax.Bezier": {
+        "path": "./node_modules/bezier-js/lib/bezier.js",
+        "obj": "Bezier"
+      }
+    }
   }
 }

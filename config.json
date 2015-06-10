@@ -2,7 +2,7 @@
   "lib": [
     "node_modules/openlayers/src/**/*.js",
     "node_modules/openlayers/build/ol.ext/**/*.js",
-    "node_modules/bezier-js/lib/bezier.js",
+    "generatedDeps/pomax/Bezier.js",
     "src/**/*.js"
   ],
   "compile": {
