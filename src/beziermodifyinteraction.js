@@ -217,6 +217,23 @@ ole3.interaction.BezierModify.handleEvent = function(mapBrowserEvent) {
       !handled;
 };
 
+ole3.interaction.BezierModify.prototype.removeVertex_ = function() {
+  var currentBezier = this.currentBezier_;
+  if (currentBezier.point.type === ole3.feature.bezierPoint.CONTROL) {
+    var result = currentBezier.node.bezierString.reset(currentBezier.bezier, currentBezier.point.index);
+    goog.array.map(result.changed, this.reIndexBezier, this);
+    var fixFirstFn = function(f, first) {
+      return function(second) {
+        return f.call(this, first, second);
+      }
+    };
+    goog.array.map(result.added, fixFirstFn(this.indexBezier_, currentBezier.node.bezierString), this);
+    goog.array.map(result.removed, this.removeBezier_, this);
+    this.overlay_.removeFeature(this.vertexFeature_);
+    this.vertexFeature_ = null;
+  }
+};
+
 /**
  * @param {ol.MapBrowserEvent} evt Event.
  * @private
@@ -285,7 +302,7 @@ ole3.interaction.BezierModify.prototype.setCurrentBezier_ = function(point, node
   };
 };
 
-ole3.interaction.BezierModify.prototype.pixelDistance_ = function(coord1, coord2, map){
+ole3.interaction.BezierModify.prototype.pixelDistance_ = function(coord1, coord2, map) {
   var c1Pixel = map.getPixelFromCoordinate(coord1);
   var c2Pixel = map.getPixelFromCoordinate(coord2);
   return Math.sqrt(ol.coordinate.squaredDistance(c1Pixel, c2Pixel));
@@ -419,16 +436,32 @@ ole3.interaction.BezierModify.handleUpEvent_ = function(evt) {
       secondBezier = this.currentBezier_.bezier.getSucessor();
     }
     if (!goog.isNull(secondBezier)) {
-      var secondNode;
-      rBush.forEach(function(node) {
-        if (node.bezier === secondBezier) {
-          secondNode = node;
-        }
-      });
-      rBush.update(secondBezier.getExtent(), secondNode);
+      this.reIndexBezier(secondBezier);
     }
     this.handlingDownUpSequence_ = false;
   }
+};
+
+ole3.interaction.BezierModify.prototype.reIndexBezier = function(bezier) {
+  var rBush = this.rBush_;
+  var bezierNode;
+  rBush.forEach(function(node) {
+    if (node.bezier === bezier) {
+      bezierNode = node;
+    }
+  });
+  rBush.update(bezier.getExtent(), bezierNode);
+};
+
+ole3.interaction.BezierModify.prototype.removeBezier_ = function(bezier) {
+  var rBush = this.rBush_;
+  var bezierNode;
+  rBush.forEach(function(node) {
+    if (node.bezier === bezier) {
+      bezierNode = node;
+    }
+  });
+  rBush.remove(bezierNode);
 };
 
 /**
