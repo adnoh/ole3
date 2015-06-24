@@ -215,20 +215,23 @@ ole3.interaction.BezierModify.handleEvent = function(mapBrowserEvent) {
 };
 
 ole3.interaction.BezierModify.prototype.removeVertex_ = function() {
-  var currentBezier = this.currentBezier_;
-  if (currentBezier.point.type === ole3.feature.bezierPoint.CONTROL) {
-    var result = currentBezier.node.bezierString.reset(currentBezier.bezier, currentBezier.point.index);
-    goog.array.map(result.changed, this.reIndexBezier, this);
-    var fixFirstFn = function(f, first) {
-      return function(second) {
-        return f.call(this, first, second);
-      }
-    };
-    goog.array.map(result.added, fixFirstFn(this.indexBezier_, currentBezier.node.bezierString), this);
-    goog.array.map(result.removed, this.removeBezier_, this);
-    this.overlay_.removeFeature(this.vertexFeature_);
-    this.vertexFeature_ = null;
-  }
+  var cp = this.currentControl_;
+  this.currentControl_ = cp.remove();
+  this.updateVertexFeature_();
+  return !this.currentControl_;
+  // if (currentBezier.point.type === ole3.feature.bezierPoint.CONTROL) {
+  //   var result = currentBezier.node.bezierString.reset(currentBezier.bezier, currentBezier.point.index);
+  //   goog.array.map(result.changed, this.reIndexBezier, this);
+  //   var fixFirstFn = function(f, first) {
+  //     return function(second) {
+  //       return f.call(this, first, second);
+  //     }
+  //   };
+  //   goog.array.map(result.added, fixFirstFn(this.indexBezier_, currentBezier.node.bezierString), this);
+  //   goog.array.map(result.removed, this.removeBezier_, this);
+  //   this.overlay_.removeFeature(this.vertexFeature_);
+  //   vertexFeature_ = null;
+  // }
 };
 
 /**
@@ -442,8 +445,8 @@ ole3.interaction.BezierModify.handleUpEvent_ = function(evt) {
     var affected = this.currentControl_.getBezierString();
     var rBush = this.rBush_;
     rBush.update(affected.getExtent(), affected);
-    this.currentControl_ = null;
-    this.updateVertexFeature_();
+    // this.currentControl_ = null;
+    // this.updateVertexFeature_();
     this.handlingDownUpSequence_ = false;
     // var secondBezier = null;
     // if (this.currentBezier_.point.index == 0) {

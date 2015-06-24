@@ -112,6 +112,7 @@ ole3.feature.HandlePointI = function() {};
 ole3.feature.HandlePointI.prototype.moveTo = function(coordinate) {};
 /**
  * Remove or reset this control point.
+ * @return {? ole3.feature.HandlePointI} [description]
  */
 ole3.feature.HandlePointI.prototype.remove = function() {};
 /**
@@ -170,7 +171,7 @@ ole3.feature.ControlHandlePoint.prototype.moveTo = function(coordinate) {
  * @inheritDoc
  */
 ole3.feature.ControlHandlePoint.prototype.remove = function() {
-  this.bezierHandle_.resetControlPoint(this.point_);
+  return this.bezierHandle_.resetControlPoint(this.point_) ? null : this;
 };
 
 /**
@@ -232,7 +233,9 @@ ole3.feature.BezierHandlePoint.prototype.moveTo = function(coordinate) {
 /**
  * @inheritDoc
  */
-ole3.feature.BezierHandlePoint.prototype.remove = function() {};
+ole3.feature.BezierHandlePoint.prototype.remove = function() {
+  return this;
+};
 
 /**
  * @inheritDoc
@@ -330,16 +333,16 @@ ole3.feature.BezierHandle.prototype.updateControlPoint =
  * Resets the ControlPoints to straight lines if left or right control point
  * or removes the whole handle if the main control point is reset.
  * @param {ole3.feature.HandlePointType} point Point to be reset.
+ * @return {boolean} If reset was successful.
  */
 ole3.feature.BezierHandle.prototype.resetControlPoint =
     function(point) {
   var left = this.left_;
   var right = this.right_;
   var bezier;
-  switch (point) {
-    case ole3.feature.HandlePointType.RIGHT:
-      this.removeRight();
-      return;
+  switch (parseInt(point)) {
+    case ole3.feature.HandlePointType.MAIN:
+      return this.removeRight();
     case ole3.feature.HandlePointType.LEFT:
       bezier = left;
       break;
@@ -347,9 +350,10 @@ ole3.feature.BezierHandle.prototype.resetControlPoint =
       bezier = right;
       break;
   }
-  if (!bezier) { return; }
+  if (!bezier) { return false; }
   bezier.resetControlPoint(point);
   this.bezierS_.changeHandle(this);
+  return true;
 };
 
 /**
@@ -461,9 +465,10 @@ ole3.feature.BezierHandle.prototype.getBeziers = function() {
 
 /**
  * Remove this handle if in the middle.
+ * @return {boolean} Deletion was successful.
  */
 ole3.feature.BezierHandle.prototype.removeRight = function() {
-  this.bezierS_.removeHandle(this);
+  return this.bezierS_.removeHandle(this);
 };
 
 /**
@@ -522,6 +527,7 @@ ole3.feature.BezierString.prototype.changeHandle = function(handle) {
   var reindex = handle.getBeziers();
   reindex.push(handle);
   goog.array.map(reindex, this.reIndexSpatial_, this);
+  this.updateGeometry_();
 };
 
 /**
@@ -529,13 +535,8 @@ ole3.feature.BezierString.prototype.changeHandle = function(handle) {
  * @param  {[type]} handle [description]
  */
 ole3.feature.BezierString.prototype.removeHandle = function(handle) {
-  var handleI = goog.array.find(this.handles_, goog.functions.equalTo(handle));
-  var left = this.beziers_[handleI - 1];
-  var right = this.beziers_[handleI];
-  handles = this.handles_;
-  left.combineWith(right);
-  this.reIndexSpatial_(left);
-  handles[handleI + 1].setLeft(left);
+  var handleI = goog.array.findIndex(this.handles_, goog.functions.equalTo(handle));
+  if (handleI == this.handles_.length - 1) { return false; }
   this.removePartAtIndex_(handleI);
   this.updateGeometry_();
 };
@@ -563,13 +564,24 @@ ole3.feature.BezierString.prototype.insertHandle = function(handle) {
  * @private
  */
 ole3.feature.BezierString.prototype.removePartAtIndex_ = function(ind) {
+  handles = this.handles_;
   var handle = handles.splice(ind, 1)[0];
-  var features = handle.getHandles();
-  goog.array.map(features, this.handleFeatures_.remove, this.handleFeatures_);
-  var remove = [];
+  var beziers = handle.getBeziers();
+  var left = beziers[0];
+  var right = beziers[1];
+  var nextHandle = handles[ind]
+  var removeFeat = handle.getHandles();
+  removeFeat.push.apply(removeFeat, nextHandle.getHandles());
+  goog.array.map(removeFeat, this.handleFeatures_.remove, this.handleFeatures_);
+  var remove = []
   remove.push(handle);
   remove.push.apply(remove, this.beziers_.splice(ind, 1));
   goog.array.map(remove, this.removeIndexSpatial_, this);
+  left.combineWith(right);
+  nextHandle.setLeft(left);
+  addFeat = nextHandle.getHandles();
+  goog.array.map(addFeat, this.handleFeatures_.push, this.handleFeatures_);
+  this.reIndexSpatial_(left);
 };
 
 /**
@@ -582,11 +594,11 @@ ole3.feature.BezierString.prototype.removePartAtIndex_ = function(ind) {
 ole3.feature.BezierString.prototype.addPartAtIndex_ =
     function(ind, bezier, handle) {
   var features = handle.getHandles();
+  features.push.apply(features, this.handles_[ind].getHandles());
   goog.array.map(features, this.handleFeatures_.remove, this.handleFeatures_);
   goog.array.map(features, this.handleFeatures_.push, this.handleFeatures_);
   this.beziers_.splice(ind, 0, bezier);
   this.handles_.splice(ind, 0, handle);
-  console.log(ind);
   var add = [bezier, handle];
   goog.array.map(add, this.addIndexSpatial_, this);
 };
@@ -828,7 +840,6 @@ ole3.feature.BezierString.prototype.update_ = function() {
 ole3.feature.BezierString.prototype.updateGeometry_ = function() {
   var beziers = this.beziers_;
   var coord = [];
-  console.log(beziers);
   for (var i = 0, ii = beziers.length; i < ii; i++) {
     var drop = i == 0 ? 0 : 1;
     var bezier = beziers[i];
@@ -953,6 +964,7 @@ ole3.feature.Bezier.prototype.combineWith = function(b) {
   var cps = this.controlPoints_;
   var newRightSide = b.controlPoints_.slice(2);
   cps.splice.apply(cps, [2, 2].concat(newRightSide));
+  this.createOrUpdateHandles_();
 };
 
 /**
@@ -961,11 +973,14 @@ ole3.feature.Bezier.prototype.combineWith = function(b) {
  */
 ole3.feature.Bezier.prototype.resetControlPoint = function(i) {
   if (i != 1 && i != 2) { return; }
+  var cps = this.controlPoints_;
   vecMath = ol.coordinate;
-  var start = this.controlPoints_[0];
-  var diffThird = vecMath.sub(this.controlPoints_[3].slice(), start);
-  var offset = vecMath.scale(diffThird, i);
-  this.controlPoints_[i] = vecMath.add(start, offset);
+  var start = cps[0];
+  var end = cps[3];
+  var diff = vecMath.sub(end.slice(), start);
+  var offset = vecMath.scale(diff, i / 3);
+  this.controlPoints_[i] = vecMath.add(start.slice(), offset);
+  this.createOrUpdateHandles_();
 };
 
 ole3.feature.Bezier.prototype.getGeometry = function() {
@@ -1005,7 +1020,6 @@ ole3.feature.Bezier.prototype.changeControlPoint = function(index, newValue) {
   }
   this.controlPoints_[index] = newValue;
   this.createOrUpdateHandles_();
-  this.bezierS_.updateGeometry_();
 };
 
 // ole3.feature.Bezier.prototype.closestPoint = function(coordinate) {
