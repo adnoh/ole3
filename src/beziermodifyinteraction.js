@@ -6,20 +6,8 @@ goog.require('ol.Feature');
 goog.require('ol.FeatureOverlay');
 goog.require('ol.events.condition');
 goog.require('ol.geom.Point');
-goog.require('ol.interaction.Modify');
 goog.require('ol.interaction.Pointer');
-goog.require('ole3.feature.Bezier');
-goog.require('ole3.feature.BezierString');
-
-/**
- * @typedef {{depth: (Array.<number>|undefined),
- *            feature: ol.Feature,
- *            geometry: ol.geom.SimpleGeometry,
- *            index: (number),
- *            length: (number),
- *            bezier: Array.<ol.Coordinates>}}
- */
-ol.interaction.BezierCurveDataType;
+goog.require('ole3.wrapper.BezierString');
 
 /**
  * Interaction for modifiying LineStrings as bezier curves.
@@ -56,21 +44,13 @@ ole3.interaction.BezierModify = function(options) {
 
   /**
    * Current dragged bezier information
-   * @type {Array.<{
-   *          bezier: Array.<ol.Coordinates>
-   *          index: number
-   *        }>}
+   * @type {ole3.structs.ClosestHandleDescriptor}
    * @private
    */
-  this.currentBezier_ = null;
+  this.currentControl_ = null;
 
-  /**
-   * @type {ol.Pixel}
-   * @private
-   */
-  this.lastPixel_ = [0, 0];
 
-  this.handlingDownUpSequence = false;
+  this.handlingDownUpSequence_ = false;
 
   /**
    * Segment RTree for each layer
@@ -93,7 +73,7 @@ ole3.interaction.BezierModify = function(options) {
    */
   this.overlay_ = new ol.FeatureOverlay({
     style: goog.isDef(options.style) ? options.style :
-        ol.interaction.Modify.getDefaultStyleFunction()
+        ole3.interaction.BezierModify.getDefaultStyleFunction()
   });
 
   /**
@@ -144,17 +124,18 @@ ole3.interaction.BezierModify.prototype.addFeature_ = function(feature) {
 ole3.interaction.BezierModify.prototype.removeFeature_ =
     function(feature) {
   var rBush = this.rBush_;
-  var i, bezierCurvesToRemove = [];
+  var i, bezierStringsToRemove = [];
   rBush.forEachInExtent(feature.getGeometry().getExtent(),
-      function(bezierCurve) {
-    if (feature === bezierCurve.feature) {
-      bezierCurvesToRemove.push(bezierCurve);
+      function(bezierString) {
+    if (feature === bezierString.getFeature()) {
+      bezierStringsToRemove.push(bezierString);
     }
   });
-  for (i = bezierCurvesToRemove.length; i > 0; --i) {
-    goog.array.map(bezierCurvesToRemove[i].handles, this.overlay_.removeFeature,
+  for (i = bezierStringsToRemove.length; i > 0; --i) {
+    goog.array.map(bezierStringsToRemove[i].getHandleFeatures(),
+        this.overlay_.removeFeature,
         this.overlay_);
-    rBush.remove(bezierCurvesToRemove[i]);
+    rBush.remove(bezierStringsToRemove[i]);
   }
 };
 
@@ -185,8 +166,8 @@ ole3.interaction.BezierModify.prototype.handleFeatureRemove_ = function(evt) {
   var feature = evt.element;
   this.removeFeature_(feature);
   // There remains only vertexFeature…
-  if (!goog.isNull(this.vertexFeature_) /*&&
-      this.features_.getLength() === 0*/) {
+  if (!goog.isNull(this.vertexFeature_) &&
+      this.features_.getLength() === 0) {
     this.overlay_.removeFeature(this.vertexFeature_);
     this.vertexFeature_ = null;
   }
@@ -218,20 +199,10 @@ ole3.interaction.BezierModify.handleEvent = function(mapBrowserEvent) {
 };
 
 ole3.interaction.BezierModify.prototype.removeVertex_ = function() {
-  var currentBezier = this.currentBezier_;
-  if (currentBezier.point.type === ole3.feature.bezierPoint.CONTROL) {
-    var result = currentBezier.node.bezierString.reset(currentBezier.bezier, currentBezier.point.index);
-    goog.array.map(result.changed, this.reIndexBezier, this);
-    var fixFirstFn = function(f, first) {
-      return function(second) {
-        return f.call(this, first, second);
-      }
-    };
-    goog.array.map(result.added, fixFirstFn(this.indexBezier_, currentBezier.node.bezierString), this);
-    goog.array.map(result.removed, this.removeBezier_, this);
-    this.overlay_.removeFeature(this.vertexFeature_);
-    this.vertexFeature_ = null;
-  }
+  var cp = this.currentControl_;
+  this.currentControl_ = cp.remove();
+  this.updateVertexFeature_();
+  return !this.currentControl_;
 };
 
 /**
@@ -239,7 +210,6 @@ ole3.interaction.BezierModify.prototype.removeVertex_ = function() {
  * @private
  */
 ole3.interaction.BezierModify.prototype.handlePointerMove_ = function(evt) {
-  this.lastPixel_ = evt.pixel;
   this.handlePointerAtPixel_(evt.pixel, evt.map);
 };
 
@@ -251,55 +221,37 @@ ole3.interaction.BezierModify.prototype.handlePointerMove_ = function(evt) {
 ole3.interaction.BezierModify.prototype.handlePointerAtPixel_ =
     function(pixel, map) {
   var pixelCoordinate = map.getCoordinateFromPixel(pixel);
-  // var handleDistanceFn = ole3.bezier.handleDistanceToFn(pixelCoordinate);
-  var sortByDistance = function(a, b) {
-     return a.bezier.closestPoint(pixelCoordinate).squaredDistance -
-        b.bezier.closestPoint(pixelCoordinate).squaredDistance;
-  };
-
   var lowerLeft = map.getCoordinateFromPixel(
       [pixel[0] - this.pixelTolerance_, pixel[1] + this.pixelTolerance_]);
   var upperRight = map.getCoordinateFromPixel(
       [pixel[0] + this.pixelTolerance_, pixel[1] - this.pixelTolerance_]);
   var box = ol.extent.boundingExtent([lowerLeft, upperRight]);
-
+  var pixelDistance = this.pixelDistance_;
+  var pixelTolerance = this.pixelTolerance_;
+  var snapFn = function(coordinate) {
+    return pixelDistance(coordinate, pixelCoordinate, map) <= pixelTolerance;
+  };
   var rBush = this.rBush_;
   var nodes = rBush.getInExtent(box);
-  if (nodes.length > 0) {
-    nodes.sort(sortByDistance);
-    var node = nodes[0];
-    var closestBezier = node.bezier;
-    var closestPoint = closestBezier.closestPoint(pixelCoordinate);
-    if (this.pixelDistance_(closestPoint.coordinate, pixelCoordinate, map) <=
-        this.pixelTolerance_) {
-      if (closestPoint.type === ole3.feature.bezierPoint.CURVE) {
-        var closestControl =
-            closestBezier.closestControlPoint(pixelCoordinate);
-        if (this.pixelDistance_(closestControl.coordinate,
-            pixelCoordinate, map) <= this.pixelTolerance_) {
-          closestPoint = closestControl;
-        }
-      }
-      this.setCurrentBezier_(closestPoint, node);
-      this.createOrUpdateVertexFeature_(closestPoint.coordinate);
-      return;
-    }
-  }
-  if (!goog.isNull(this.vertexFeature_)) {
-    this.overlay_.removeFeature(this.vertexFeature_);
-    this.vertexFeature_ = null;
-  }
-};
 
-ole3.interaction.BezierModify.prototype.setCurrentBezier_ = function(point, node) {
-  if (!goog.isDef(point)) {
-    this.currentBezier_ = null;
+  if (nodes.length > 0) {
+    var controlPoints = goog.array.map(nodes, function(node) {
+      return node.getClosestHandle(pixelCoordinate, snapFn, box);
+    });
+    controlPoints = goog.array.filter(controlPoints, goog.isDef);
+    var cp = goog.array.reduce(controlPoints, function(prev, curr) {
+      if (!prev) { return curr; }
+      if (prev.snapable != curr.snapable) {
+        var snap = curr.snapable ? curr : prev;
+        if (snapFn(snap.coordinate)) { return snap; }
+      }
+      return curr.sqDistance < prev.sqDistance ? curr : prev;
+    });
+    this.currentControl_ = cp ? cp.handlePoint : null;
+  } else {
+    this.currentControl_ = null;
   }
-  this.currentBezier_ = {
-    point: point,
-    bezier: node.bezier,
-    node: node
-  };
+  this.updateVertexFeature_();
 };
 
 ole3.interaction.BezierModify.prototype.pixelDistance_ = function(coord1, coord2, map) {
@@ -309,22 +261,30 @@ ole3.interaction.BezierModify.prototype.pixelDistance_ = function(coord1, coord2
 };
 
 /**
- * @param {ol.Coordinate} coordinates Coordinates.
+ * Updates the current Vertex based on the selected controlpoint
  * @return {ol.Feature} Vertex feature.
  * @private
  */
-ole3.interaction.BezierModify.prototype.createOrUpdateVertexFeature_ =
-    function(coordinates) {
-  var vertexFeature = this.vertexFeature_;
-  if (goog.isNull(vertexFeature)) {
-    vertexFeature = new ol.Feature(new ol.geom.Point(coordinates));
-    this.vertexFeature_ = vertexFeature;
-    this.overlay_.addFeature(vertexFeature);
-  } else {
-    var geometry = /** @type {ol.geom.Point} */ (vertexFeature.getGeometry());
-    geometry.setCoordinates(coordinates);
+ole3.interaction.BezierModify.prototype.updateVertexFeature_ =
+    function() {
+  var cp = this.currentControl_;
+  var vtx = this.vertexFeature_;
+  if (goog.isNull(cp)) {
+    if (!goog.isNull(vtx)) {
+      this.overlay_.removeFeature(vtx);
+      this.vertexFeature_ = null;
+    }
+    return;
   }
-  return vertexFeature;
+  if (goog.isNull(vtx)) {
+    vtx = new ol.Feature(new ol.geom.Point(cp.getCoordinate()));
+    this.vertexFeature_ = vtx;
+    this.overlay_.addFeature(vtx);
+  } else {
+    var geometry = /** @type {ol.geom.Point} */ (vtx.getGeometry());
+    geometry.setCoordinates(cp.getCoordinate());
+  }
+  return vtx;
 };
 
 /**
@@ -334,29 +294,23 @@ ole3.interaction.BezierModify.prototype.createOrUpdateVertexFeature_ =
  */
 ole3.interaction.BezierModify.prototype.writeLineStringGeometry_ =
     function(feature, geometry) {
-  var bezierString = new ole3.feature.BezierString(feature);
-  var handles = bezierString.getHandles();
+  var bezierString = new ole3.wrapper.BezierString(feature);
+  var handles = bezierString.getHandleFeatures();
   handles.forEach(this.addHandle_, this);
   handles.on('add', this.handleAddHandle_, this);
   handles.on('remove', this.handleRemoveHandle_, this);
-  var beziers = bezierString.getBeziers();
-  var rBush = this.rBush_;
-  var fixFirstFn = function(f, first) {
-    return function(second) {
-      return f.call(this, first, second);
-    }
-  };
-  beziers.forEach(fixFirstFn(this.indexBezier_, bezierString), this);
+  this.indexBezierString_(bezierString);
 };
 
-ole3.interaction.BezierModify.prototype.indexBezier_ = function(bezierString, bezier) {
-  var node = {
-      bezierString: bezierString,
-      bezier: bezier
-  };
-  this.rBush_.insert(bezier.getExtent(), node, this);
-  return node;
+/**
+ * Adds the given bezierString to the spatial index.
+ * @param  {ole3.wrapper.BezierString} bezierString BezierString to index.
+ * @private
+ */
+ole3.interaction.BezierModify.prototype.indexBezierString_ = function(bezierString) {
+  this.rBush_.insert(bezierString.getExtent(), bezierString);
 };
+
 
 ole3.interaction.BezierModify.prototype.addHandle_ = function(handle) {
   this.overlay_.addFeature(handle);
@@ -392,31 +346,10 @@ ole3.interaction.BezierModify.handleDownEvent_ = function(evt) {
  * @private
  */
 ole3.interaction.BezierModify.handleDragEvent_ = function(evt) {
-  var currentBezier = this.currentBezier_;
+  var cp = this.currentControl_;
   var coordinate = evt.coordinate;
-  this.createOrUpdateVertexFeature_(coordinate);
-  if (currentBezier.point.type == ole3.feature.bezierPoint.CURVE) {
-    var oldBezier = currentBezier.bezier;
-    var oldNode;
-    var newBeziers = currentBezier.node.bezierString.splitBezier(oldBezier,
-       currentBezier.point.parameter);
-    this.rBush_.forEachInExtent(oldBezier.getExtent(), function(node) {
-      if (node.bezier === oldBezier) {
-        oldNode = node;
-      }
-    });
-    this.rBush_.remove(oldNode);
-    var fixFirstFn = function(f, first) {
-      return function(second) {
-        return f.call(this, first, second);
-      }
-    };
-    var newNodes = goog.array.map(newBeziers, fixFirstFn(this.indexBezier_,
-        currentBezier.node.bezierString), this);
-    this.setCurrentBezier_(newNodes[0].bezier.closestControlPoint(coordinate),
-        newNodes[0]);
-  }
-  currentBezier.bezier.changeControlPoint(currentBezier.point.index, coordinate);
+  this.currentControl_ = cp.moveTo(coordinate);
+  this.updateVertexFeature_();
 };
 
 /**
@@ -427,47 +360,17 @@ ole3.interaction.BezierModify.handleDragEvent_ = function(evt) {
  */
 ole3.interaction.BezierModify.handleUpEvent_ = function(evt) {
   if (this.handlingDownUpSequence_ == true) {
+    var affected = this.currentControl_.getBezierString();
     var rBush = this.rBush_;
-    rBush.update(this.currentBezier_.bezier.getExtent(), this.currentBezier_.node);
-    var secondBezier = null;
-    if (this.currentBezier_.point.index == 0) {
-      secondBezier = this.currentBezier_.bezier.getPredecessor();
-    } else if (this.currentBezier_.point.index == 3) {
-      secondBezier = this.currentBezier_.bezier.getSucessor();
-    }
-    if (!goog.isNull(secondBezier)) {
-      this.reIndexBezier(secondBezier);
-    }
+    rBush.update(affected.getExtent(), affected);
     this.handlingDownUpSequence_ = false;
   }
-};
-
-ole3.interaction.BezierModify.prototype.reIndexBezier = function(bezier) {
-  var rBush = this.rBush_;
-  var bezierNode;
-  rBush.forEach(function(node) {
-    if (node.bezier === bezier) {
-      bezierNode = node;
-    }
-  });
-  rBush.update(bezier.getExtent(), bezierNode);
-};
-
-ole3.interaction.BezierModify.prototype.removeBezier_ = function(bezier) {
-  var rBush = this.rBush_;
-  var bezierNode;
-  rBush.forEach(function(node) {
-    if (node.bezier === bezier) {
-      bezierNode = node;
-    }
-  });
-  rBush.remove(bezierNode);
 };
 
 /**
  * @return {ol.style.StyleFunction} Styles.
  */
-ol.interaction.Modify.getDefaultStyleFunction = function() {
+ole3.interaction.BezierModify.getDefaultStyleFunction = function() {
   var style = ol.style.createDefaultEditingStyles();
   return function(feature, resolution) {
     if (feature.getGeometry().getType() == ol.geom.GeometryType.LINE_STRING) {
