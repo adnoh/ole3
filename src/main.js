@@ -3,6 +3,7 @@ goog.provide('ole3');
 goog.require('ol.Collection');
 goog.require('ol.Map');
 goog.require('ol.View');
+goog.require('ol.control.FullScreen');
 goog.require('ol.format.GeoJSON');
 goog.require('ol.interaction.Draw');
 goog.require('ol.interaction.Modify');
@@ -10,6 +11,7 @@ goog.require('ol.layer.Tile');
 goog.require('ol.layer.Vector');
 goog.require('ol.source.OSM');
 goog.require('ol.source.Vector');
+goog.require('ole3.control.Editor');
 goog.require('ole3.interaction.BezierModify');
 
 
@@ -45,6 +47,8 @@ ole3.map = new ol.Map({
   })
 });
 
+ole3.map.addControl(new ole3.control.Editor());
+ole3.map.addControl(new ol.control.FullScreen());
 ole3.map.addLayer(ole3.layer);
 ole3.map.addInteraction(
     new ole3.interaction.BezierModify({
