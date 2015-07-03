@@ -1,14 +1,15 @@
 goog.provide('ole3');
 
+goog.require('ol.Collection');
 goog.require('ol.Map');
 goog.require('ol.View');
-goog.require('ol.layer.Tile');
-goog.require('ol.source.OSM');
+goog.require('ol.format.GeoJSON');
 goog.require('ol.interaction.Draw');
-goog.require('ol.layer.Vector');
-goog.require('ol.source.Vector');
 goog.require('ol.interaction.Modify');
-goog.require('ol.Collection');
+goog.require('ol.layer.Tile');
+goog.require('ol.layer.Vector');
+goog.require('ol.source.OSM');
+goog.require('ol.source.Vector');
 goog.require('ole3.interaction.BezierModify');
 
 
@@ -24,13 +25,9 @@ ole3.layer = new ol.layer.Vector({
     source: ole3.source
 });
 
-/**
- * @type {ol.interaction.Draw}
- */
-ole3.draw = new ol.interaction.Draw({
-    type: 'LineString',
-    source: ole3.source
-});
+var geoJSON = new ol.format.GeoJSON();
+features = geoJSON.readFeatures('{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"LineString","coordinates":[[-5679576.949701736,3326539.470970871],[4339177.221692885,2025275.50144403],[-5620873.311978721,528332.7395071383],[4887077.840441029,-724011.5319171892],[-5521644.543570097,-198476.98154901946],[3900289.3109738687,-2028073.690582998],[-4738929.373929892,-1940018.2339984747]]},"properties":null}]}');
+ole3.source.addFeatures(features);
 
 /**
  * @type {ol.Map}
@@ -48,15 +45,9 @@ ole3.map = new ol.Map({
   })
 });
 
-ole3.map.addInteraction(ole3.draw);
 ole3.map.addLayer(ole3.layer);
-
-ole3.edit = function() {
-    ole3.map.removeInteraction(ole3.draw);
-    ole3.map.addInteraction(
-        new ole3.interaction.BezierModify({
-            features: new ol.Collection(ole3.source.getFeatures())
-        })
-    );
-}
-goog.exportSymbol('startEdit', ole3.edit);
+ole3.map.addInteraction(
+    new ole3.interaction.BezierModify({
+        features: new ol.Collection(ole3.source.getFeatures())
+    })
+);
