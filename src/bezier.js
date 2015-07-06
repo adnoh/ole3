@@ -741,8 +741,11 @@ ole3.wrapper.BezierString = function(feature) {
    */
   this.rBush_ = new ol.structs.RBush();
 
-  // TODO: if beziers already stored
-  this.bezierifyLineString_();
+  var bezierDesc = this.feature_.get('bezier');
+  if (!bezierDesc) {
+    bezierDesc = this.bezierifyLineString_();
+  }
+  this.loadFromControlPoints_(bezierDesc);
 };
 
 /**
@@ -933,7 +936,8 @@ ole3.wrapper.BezierString.prototype.updateGeometry_ = function() {
   }
   var geom = this.feature_.getGeometry();
   geom.setCoordinates(coord);
-  // TODO: Persist BezierCurve Information.
+  this.feature_.set('bezier',
+      goog.array.map(beziers, function(b) { return b.getControlPoints(); }));
 };
 
 ole3.wrapper.BezierString.prototype.bezierifyLineString_ = function() {
@@ -941,12 +945,18 @@ ole3.wrapper.BezierString.prototype.bezierifyLineString_ = function() {
   goog.asserts.assertInstanceof(geometry, ol.geom.LineString,
       'only LineStrings are supported');
   var coordinates = geometry.getCoordinates();
-  var lastBezier = null;
+  cps = [];
   for (var i = 0, ii = coordinates.length - 1; i < ii; i++) {
     var segment = coordinates.slice(i, i + 2);
-    var bezier = new ole3.bezier.Curve(
-        this.controlPointsForSegment_.apply(
-        this, segment), this);
+    cps.push(this.controlPointsForSegment_.apply(this, segment));
+  }
+  return cps;
+};
+
+ole3.wrapper.BezierString.prototype.loadFromControlPoints_ = function(cps) {
+  var lastBezier = null;
+  for (var i = 0, ii = cps.length - 1; i <= ii; i++) {
+    var bezier = new ole3.bezier.Curve(cps[i], this);
     var handle = new ole3.bezier.Control(this, lastBezier, bezier);
     this.pushPart_(bezier, handle);
     lastBezier = bezier;
