@@ -9,7 +9,6 @@ goog.require('ol.css');
 
 /**
  * Event Types that should be emmited by ToolIs
- * @enum
  * @const
  */
 ole3.control.ToolEventTypes = {
@@ -20,6 +19,7 @@ ole3.control.ToolEventTypes = {
 /**
  * Tool meant to be used in a toolbar must fullfill this interface.
  * @interface
+ * @extends {goog.events.Listenable}
  */
 ole3.control.ToolI = function() {};
 
@@ -42,7 +42,7 @@ ole3.control.ToolI.prototype.setMap = function(map) {};
 
 /**
  * An ol.Control consisting of an configurable set of ole3.control.ToolIs
- * @param {[type]} opt_options [description]
+ * @param {Object} opt_options Options for toolbar.
  * @extends {ol.control.Control}
  * @constructor
  */
@@ -53,13 +53,14 @@ ole3.control.Toolbar = function(opt_options) {
             ol.css.CLASS_UNSELECTABLE + ' ' + ol.css.CLASS_CONTROL);
 
     this.tools_ = /** @type {ol.Collection.<ole3.control.ToolI>} */
-            (options['tools'] || new ol.Collection());
+            (options.tools || new ol.Collection());
 
     this.tools_.forEach(function(tool) {
         goog.events.listen(tool, ole3.control.ToolEventTypes.WILL_ENABLE,
                 this.handleToolWillEnable_, false, this);
         var el = tool.getElement();
-        el.style.float = el.style.float ? el.style.float : 'left';
+        el['style']['float'] = el['style']['float'] ?
+            el['style']['float'] : 'left';
         goog.dom.appendChild(toolbar, el);
     }, this);
 
@@ -72,7 +73,7 @@ goog.inherits(ole3.control.Toolbar, ol.control.Control);
 
 /**
  * Handle activation of a tool. Currently deactivate all other tools.
- * @param  {[type]} evt [description]
+ * @param  {Object} evt Event descriptor
  * @private
  */
 ole3.control.Toolbar.prototype.handleToolWillEnable_ = function(evt) {
@@ -83,6 +84,9 @@ ole3.control.Toolbar.prototype.handleToolWillEnable_ = function(evt) {
     });
 };
 
+/**
+ * @inheritDoc
+ */
 ole3.control.Toolbar.prototype.setMap = function(map) {
     goog.base(this, 'setMap', map);
     this.tools_.forEach(function(tool) {

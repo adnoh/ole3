@@ -1,21 +1,26 @@
 goog.provide('ole3.bezier.Control');
 goog.provide('ole3.bezier.ControlPoint');
+goog.provide('ole3.bezier.ControlPointDescriptor');
+goog.provide('ole3.bezier.ControlPointI');
+goog.provide('ole3.bezier.ControlPointProviderI');
 goog.provide('ole3.bezier.ControlPointType');
 goog.provide('ole3.bezier.Curve');
 goog.provide('ole3.bezier.CurvePoint');
-goog.provide('ole3.bezier.EditablePointDescriptor');
-goog.provide('ole3.bezier.EditablePointI');
-goog.provide('ole3.bezier.EditableProviderI');
 goog.provide('ole3.feature.ExtentsI');
 goog.provide('ole3.wrapper.BezierString');
 
 goog.require('goog.array');
 goog.require('goog.functions');
 goog.require('goog.object');
+goog.require('ol.Collection');
+goog.require('ol.Feature');
+goog.require('ol.Object');
 goog.require('ol.coordinate');
 goog.require('ol.extent');
+goog.require('ol.geom.LineString');
 goog.require('ol.structs.RBush');
 goog.require('pomax.Bezier');
+
 
 /**
  * Contents:
@@ -32,6 +37,7 @@ goog.require('pomax.Bezier');
 /**
  * Control Point Types
  * @const
+ * @enum
  */
 ole3.bezier.ControlPointType = {
   MAIN: 0,
@@ -51,13 +57,13 @@ ole3.bezier.ControlPointI = function() {};
 /**
  * Move this handle to new coordinate.
  * @param {ol.Coordinate} coordinate Coordinate to move to.
- * @return {ole3.bezier.EditablePointI}
+ * @return {ole3.bezier.ControlPointI}
  *         A new handle point replacing this one. Can be different.
  */
 ole3.bezier.ControlPointI.prototype.moveTo = function(coordinate) {};
 /**
  * Remove or reset this control point.
- * @return {? ole3.bezier.EditablePointI} [description]
+ * @return {? ole3.bezier.ControlPointI} [description]
  */
 ole3.bezier.ControlPointI.prototype.remove = function() {};
 /**
@@ -74,14 +80,15 @@ ole3.bezier.ControlPointI.prototype.getBezierString = function() {};
 /**
  * Feature that can be queryied for a closest handle.
  * @interface
+ * @extends {ole3.feature.ExtentsI}
  */
-ole3.bezier.EditableProviderI = function() {};
+ole3.bezier.ControlPointProviderI = function() {};
 /**
  * Query the closest HandlePoint to coordinate
  * @param  {ol.Coordinate} coordinate Coordinate
- * @return {Object.ole3.bezier.EditablePointDescriptor} Closest Handle.
+ * @return {ole3.bezier.ControlPointDescriptor} Closest Handle.
  */
-ole3.bezier.EditableProviderI.prototype.getClosestHandlePoint =
+ole3.bezier.ControlPointProviderI.prototype.getClosestHandlePoint =
     function(coordinate) {};
 
 /**
@@ -101,18 +108,18 @@ ole3.feature.ExtentsI.prototype.getExtent = function() {};
 
 /**
  * Descriptor the closest HandlePoint.
- * @param {ole3.bezier.EditablePointI} handlePoint Closest HandlePointI.
+ * @param {ole3.bezier.ControlPointI} handlePoint Closest HandlePointI.
  * @param {ol.Coordinate} coordinate Coordinate.
  * @param {number} sqDistance Squared Distance in currecnt coordinate system.
  * @param {boolean} snapable Wether this should be snapped to.
  * @constructor
  * @struct
  */
-ole3.bezier.EditablePointDescriptor =
+ole3.bezier.ControlPointDescriptor =
     function(handlePoint, coordinate, sqDistance, snapable) {
   /**
    * Closest HandlePointI.
-   * @type {ole3.bezier.EditablePointI}
+   * @type {ole3.bezier.ControlPointI}
    */
   this.handlePoint = handlePoint;
   /**
@@ -145,7 +152,7 @@ ole3.bezier.EditablePointDescriptor =
  * @param {?ole3.bezier.Curve} right
  *        Right hand bezier curve or null if last handle.
  * @constructor
- * @implements {ole3.bezier.EditableProviderI}
+ * @implements {ole3.bezier.ControlPointProviderI}
  * @implements {ole3.feature.ExtentsI}
  */
 ole3.bezier.Control = function(bezierS, left, right) {
@@ -192,7 +199,7 @@ ole3.bezier.Control.prototype.updateControlPoint =
   var left = this.left_;
   var right = this.right_;
   var types = ole3.bezier.ControlPointType;
-  switch (parseInt(point)) {
+  switch (point) {
     case types.MAIN:
       if (left) {
         left.changeControlPoint(3, coordinate);
@@ -223,7 +230,7 @@ ole3.bezier.Control.prototype.resetControlPoint =
   var left = this.left_;
   var right = this.right_;
   var bezier;
-  switch (parseInt(point)) {
+  switch (point) {
     case ole3.bezier.ControlPointType.MAIN:
       return this.remove();
     case ole3.bezier.ControlPointType.LEFT:
@@ -241,7 +248,7 @@ ole3.bezier.Control.prototype.resetControlPoint =
 
 /**
  * Create a new HandlePoint for the main ControlPoint.
- * @return {ole3.bezier.EditablePointI}
+ * @return {ole3.bezier.ControlPointI}
  *         New HandlePoint for the main ControlPoint.
  */
 ole3.bezier.Control.prototype.mainHandlePoint = function() {
@@ -274,9 +281,12 @@ ole3.bezier.Control.prototype.getClosestHandlePoint =
     function(coordinate) {
   var cps = this.getControlPoints();
   var reduce = goog.array.reduce;
-  var keys = goog.object.getKeys;
-  var descr = ole3.bezier.EditablePointDescriptor;
-  var closestHandlePoint = goog.array.reduce(goog.object.getKeys(cps),
+  var keys = goog.array.map(goog.object.getKeys(cps),
+      function(k) {
+    return /** @type {ole3.bezier.ControlPointType} */ (parseInt(k, 10));
+  });
+  var descr = ole3.bezier.ControlPointDescriptor;
+  var closestHandlePoint = goog.array.reduce(keys,
       function(last, curr) {
     var sqDist = ol.coordinate.squaredDistance(cps[curr], coordinate);
     if (goog.isDef(last) && sqDist >= last.sqDistance) { return last; }
@@ -297,13 +307,13 @@ ole3.bezier.Control.prototype.getExtent = function() {
 
 /**
  * Gets all control points of this handle
- * @return {Object<{ole3.bezier.ControlPointType:ol.Coordinate}>}
+ * @return {Object<ole3.bezier.ControlPointType, ol.Coordinate>}
  *         Control Points.
  */
 ole3.bezier.Control.prototype.getControlPoints = function() {
   var left = this.left_;
   var right = this.right_;
-  cps = {};
+  var cps = {};
   if (left) {
     var leftCps = left.getControlPoints();
     cps[ole3.bezier.ControlPointType.LEFT] = leftCps[2];
@@ -354,7 +364,7 @@ ole3.bezier.Control.prototype.setLeft = function(left) {
 
 /**
  * HandlePoint for a control point.
- * @implements {ole3.bezier.EditablePointI}
+ * @implements {ole3.bezier.ControlPointI}
  * @param {ole3.bezier.Control} bezierH Affected BezierHandle
  * @param {ole3.bezier.ControlPointType} point
  *        Affected controlPoint.
@@ -418,16 +428,19 @@ ole3.bezier.ControlPoint.prototype.getBezierString = function() {
  * Curve wraps a segment of linestring described as bezier curve
  * @param {Array<ol.Coordinate>} controlPoints
  *        The four coordinates describing the curve.
- * @param {ol.wrapper.BezierString} bezierString
+ * @param {ole3.wrapper.BezierString} bezierString
  *        Bezierstring this curve belongs to.
- * @implements {ole3.bezier.EditableProviderI}
+ * @implements {ole3.bezier.ControlPointProviderI}
  * @implements {ole3.feature.ExtentsI}
+ * @extends {ol.Object}
  * @constructor
  */
 ole3.bezier.Curve = function(controlPoints, bezierString) {
   goog.base(this);
   this.controlPoints_ = controlPoints;
-  this.createOrUpdateHandles_();
+  this.handles_ = [];
+  this.handles_.push(this.newHandleFeature_(this.controlPoints_.slice(0, 2)));
+  this.handles_.push(this.newHandleFeature_(this.controlPoints_.slice(2, 4)));
   this.bezierS_ = bezierString;
 };
 goog.inherits(ole3.bezier.Curve, ol.Object);
@@ -457,9 +470,13 @@ ole3.bezier.Curve.prototype.getExtent = function() {
  */
 ole3.bezier.Curve.prototype.splitAt = function(t) {
   var bezierJS = this.getBezierJS_();
+  console.log('2.2');
   var newCurves = bezierJS.split(t);
-  var newRightBezier = this.fromBezierJS_(newCurves.right);
-  this.setFromBezierJS_(newCurves.left);
+  console.log(newCurves);
+  console.log('2.3');
+  var newRightBezier = this.fromBezierJS_(newCurves['right']);
+  console.log('2.4');
+  this.setFromBezierJS_(newCurves['left']);
   var newHandle =
       new ole3.bezier.Control(this.bezierS_, this, newRightBezier);
   this.bezierS_.insertHandle(newHandle);
@@ -485,7 +502,7 @@ ole3.bezier.Curve.prototype.combineWith = function(b) {
 ole3.bezier.Curve.prototype.resetControlPoint = function(i) {
   if (i != 1 && i != 2) { return; }
   var cps = this.controlPoints_;
-  vecMath = ol.coordinate;
+  var vecMath = ol.coordinate;
   var start = cps[0];
   var end = cps[3];
   var diff = vecMath.sub(end.slice(), start);
@@ -515,8 +532,8 @@ ole3.bezier.Curve.prototype.closestCurvePoint = function(coordinate) {
   var precision = lutPoints.length - 1;
   var closestPoints = [];
   for (var i = 0; i < precision; i++) {
-    segment = lutPoints.slice(i, i + 2);
-    closestOnSegment = ol.coordinate.closestOnSegment(coordinate, segment);
+    var segment = lutPoints.slice(i, i + 2);
+    var closestOnSegment = ol.coordinate.closestOnSegment(coordinate, segment);
     closestPoints.push(closestOnSegment);
   }
   var closest = this.getClosestCoordinateIndex_(coordinate, closestPoints);
@@ -538,7 +555,7 @@ ole3.bezier.Curve.prototype.getClosestCoordinateIndex_ =
     function(needleCoord, haystackCoords) {
   var sqDistFn = ol.coordinate.squaredDistance;
   var closestIndex = -1, minSqDist = -1;
-  for (i = haystackCoords.length - 1; i >= 0; --i) {
+  for (var i = haystackCoords.length - 1; i >= 0; --i) {
     var sqDist = sqDistFn(needleCoord, haystackCoords[i]);
     if (sqDist < minSqDist || closestIndex < 0) {
       closestIndex = i;
@@ -556,7 +573,7 @@ ole3.bezier.Curve.prototype.getClosestCoordinateIndex_ =
  */
 ole3.bezier.Curve.prototype.getClosestHandlePoint = function(coordinate) {
   var cp = this.closestCurvePoint(coordinate);
-  var descr = ole3.bezier.EditablePointDescriptor;
+  var descr = ole3.bezier.ControlPointDescriptor;
   var ch = new ole3.bezier.CurvePoint(this, cp.parameter, cp.coordinate);
   return new descr(ch, cp.coordinate, cp.squaredDistance, false);
 };
@@ -615,7 +632,7 @@ ole3.bezier.Curve.prototype.getBezierJS_ = function() {
 };
 
 ole3.bezier.Curve.prototype.fromBezierJS_ = function(c) {
-  var controlPoints = goog.array.map(c.points, this.fromBezierJSCoord_);
+  var controlPoints = goog.array.map(c['points'], this.fromBezierJSCoord_);
   return new this.constructor(controlPoints, this.bezierS_);
 };
 
@@ -625,16 +642,16 @@ ole3.bezier.Curve.prototype.fromBezierJS_ = function(c) {
  * @private
  */
 ole3.bezier.Curve.prototype.setFromBezierJS_ = function(c) {
-  this.controlPoints_ = goog.array.map(c.points, this.fromBezierJSCoord_);
+  this.controlPoints_ = goog.array.map(c['points'], this.fromBezierJSCoord_);
   this.createOrUpdateHandles_();
 };
 
 ole3.bezier.Curve.prototype.toBezierJSCoord_ = function(coordinate) {
-  return {x: coordinate[0], y: coordinate[1]};
+  return {'x': coordinate[0], 'y': coordinate[1]};
 };
 
 ole3.bezier.Curve.prototype.fromBezierJSCoord_ = function(bezierJSCoord) {
-  return [bezierJSCoord.x, bezierJSCoord.y];
+  return [bezierJSCoord['x'], bezierJSCoord['y']];
 };
 
 ole3.bezier.Curve.prototype.createOrUpdateHandles_ = function() {
@@ -642,15 +659,17 @@ ole3.bezier.Curve.prototype.createOrUpdateHandles_ = function() {
   if (goog.isDef(this.handles_)) {
     this.handles_[0].setGeometry(new ol.geom.LineString(cps.slice(0, 2)));
     this.handles_[1].setGeometry(new ol.geom.LineString(cps.slice(2, 4)));
-  } else {
-    this.handles_ = [];
-    this.handles_.push(this.newHandleFeature_(cps.slice(0, 2)));
-    this.handles_.push(this.newHandleFeature_(cps.slice(2, 4)));
   }
 };
 
-ole3.bezier.Curve.prototype.newHandleFeature_ = function(start, end) {
-  return new ol.Feature(new ol.geom.LineString(start, end));
+/**
+ * [newHandleFeature_ description]
+ * @param  {Array<ol.Coordinate>} coordinates [description]
+ * @return {ol.Feature}       [description]
+ * @private
+ */
+ole3.bezier.Curve.prototype.newHandleFeature_ = function(coordinates) {
+  return new ol.Feature(new ol.geom.LineString(coordinates));
 };
 
 
@@ -660,7 +679,7 @@ ole3.bezier.Curve.prototype.newHandleFeature_ = function(start, end) {
  * @param {number} parameter Point on curve, number between 0 and 1.
  * @param {ol.Coordinate} coordinate Coordinate
  * @constructor
- * @implements {ole3.bezier.EditablePointI}
+ * @implements {ole3.bezier.ControlPointI}
  */
 ole3.bezier.CurvePoint = function(bezier, parameter, coordinate) {
   /**
@@ -691,7 +710,9 @@ ole3.bezier.CurvePoint = function(bezier, parameter, coordinate) {
 ole3.bezier.CurvePoint.prototype.moveTo = function(coordinate) {
   var bezier = this.bezier_;
   var par = this.parameter_;
+  console.log('2');
   var newHandle = bezier.splitAt(par);
+  console.log('3');
   var newHandlePoint = newHandle.mainHandlePoint();
   return newHandlePoint.moveTo(coordinate);
 };
@@ -736,7 +757,7 @@ ole3.wrapper.BezierString = function(feature) {
 
   /**
    * All Handles of this BezierString
-   * @type {ol.structs.rBush<ole3.bezier.EditableProviderI>}
+   * @type {ol.structs.RBush<ole3.bezier.ControlPointProviderI>}
    * @private
    */
   this.rBush_ = new ol.structs.RBush();
@@ -800,7 +821,7 @@ ole3.wrapper.BezierString.prototype.insertHandle = function(handle) {
  * @private
  */
 ole3.wrapper.BezierString.prototype.removePartAtIndex_ = function(ind) {
-  handles = this.handles_;
+  var handles = this.handles_;
   var handle = handles.splice(ind, 1)[0];
   var beziers = handle.getBeziers();
   var left = beziers[0];
@@ -815,7 +836,7 @@ ole3.wrapper.BezierString.prototype.removePartAtIndex_ = function(ind) {
   goog.array.map(remove, this.removeIndexSpatial_, this);
   left.combineWith(right);
   nextHandle.setLeft(left);
-  addFeat = nextHandle.getHandles();
+  var addFeat = nextHandle.getHandles();
   goog.array.map(addFeat, this.handleFeatures_.push, this.handleFeatures_);
   this.reIndexSpatial_(left);
 };
@@ -842,7 +863,7 @@ ole3.wrapper.BezierString.prototype.addPartAtIndex_ =
 /**
  * [pushPart_ description]
  * @param {ole3.bezier.Curve} bezier Bezier
- * @param {ole3.bezier.Handle} handle handle to be added.
+ * @param {ole3.bezier.Control} handle handle to be added.
  * @private
  */
 ole3.wrapper.BezierString.prototype.pushPart_ =
@@ -860,29 +881,29 @@ ole3.wrapper.BezierString.prototype.pushPart_ =
 
 /**
  * [reIndexSpatial_ description]
- * @param  {ole3.bezier.ExtentsI} extensI [description]
+ * @param  {ole3.bezier.ControlPointProviderI} cpp [description]
  * @private
  */
-ole3.wrapper.BezierString.prototype.reIndexSpatial_ = function(extensI) {
-  this.rBush_.update(extensI.getExtent(), extensI);
+ole3.wrapper.BezierString.prototype.reIndexSpatial_ = function(cpp) {
+  this.rBush_.update(cpp.getExtent(), cpp);
 };
 
 /**
  * [reIndexSpatial_ description]
- * @param  {ole3.bezier.ExtentsI} extensI [description]
+ * @param  {ole3.bezier.ControlPointProviderI} cpp [description]
  * @private
  */
-ole3.wrapper.BezierString.prototype.removeIndexSpatial_ = function(extensI) {
-  this.rBush_.remove(extensI);
+ole3.wrapper.BezierString.prototype.removeIndexSpatial_ = function(cpp) {
+  this.rBush_.remove(cpp);
 };
 
 /**
  * [reIndexSpatial_ description]
- * @param  {ole3.bezier.ExtentsI} extensI [description]
+ * @param  {ole3.bezier.ControlPointProviderI} cpp [description]
  * @private
  */
-ole3.wrapper.BezierString.prototype.addIndexSpatial_ = function(extensI) {
-  this.rBush_.insert(extensI.getExtent(), extensI);
+ole3.wrapper.BezierString.prototype.addIndexSpatial_ = function(cpp) {
+  this.rBush_.insert(cpp.getExtent(), cpp);
 };
 
 /**
@@ -898,8 +919,8 @@ ole3.wrapper.BezierString.prototype.getExtent = function() {
  * @param {ol.Coordinate} coordinate Coordinate.
  * @param {function(ol.Coordinate):boolean} snapFn
  *        Function that indicates if a coordinate is close enough to snap to.
- * @param {?ol.Extend} box optional max distance.
- * @return {?ole3.bezier.EditablePointDescriptor} Descriptor.
+ * @param {?ol.Extent} box optional max distance.
+ * @return {?ole3.bezier.ControlPointDescriptor} Descriptor.
  */
 ole3.wrapper.BezierString.prototype.getClosestHandle =
     function(coordinate, snapFn, box) {
@@ -908,13 +929,13 @@ ole3.wrapper.BezierString.prototype.getClosestHandle =
       rb.getInExtent(box);
   var cp = goog.array.reduce(handleGetters, function(prev, curr) {
       var cp = curr.getClosestHandlePoint(coordinate);
-      if (!goog.isDef(prev)) { return cp; }
+      if (goog.isNull(prev)) { return cp; }
       if (cp.snapable != prev.snapable) {
         var snap = cp.snapable ? cp : prev;
         if (snapFn(snap.coordinate)) { return snap; }
       }
       return cp.sqDistance < prev.sqDistance ? cp : prev;
-    });
+    }, null);
   return cp && snapFn(cp.coordinate) ? cp : undefined;
 };
 
@@ -934,7 +955,7 @@ ole3.wrapper.BezierString.prototype.updateGeometry_ = function() {
     var bezier = beziers[i];
     coord.push.apply(coord, bezier.getGeometry().slice(drop));
   }
-  var geom = this.feature_.getGeometry();
+  var geom = /** @type {ol.geom.LineString} */ (this.feature_.getGeometry());
   geom.setCoordinates(coord);
   this.feature_.set('bezier',
       goog.array.map(beziers, function(b) { return b.getControlPoints(); }));
@@ -945,7 +966,7 @@ ole3.wrapper.BezierString.prototype.bezierifyLineString_ = function() {
   goog.asserts.assertInstanceof(geometry, ol.geom.LineString,
       'only LineStrings are supported');
   var coordinates = geometry.getCoordinates();
-  cps = [];
+  var cps = [];
   for (var i = 0, ii = coordinates.length - 1; i < ii; i++) {
     var segment = coordinates.slice(i, i + 2);
     cps.push(this.controlPointsForSegment_.apply(this, segment));

@@ -29,7 +29,7 @@ ole3.layer = new ol.layer.Vector({
 });
 
 var geoJSON = new ol.format.GeoJSON();
-features = geoJSON.readFeatures('{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"LineString","coordinates":[[-5679576.949701736,3326539.470970871],[4339177.221692885,2025275.50144403],[-5620873.311978721,528332.7395071383],[4887077.840441029,-724011.5319171892],[-5521644.543570097,-198476.98154901946],[3900289.3109738687,-2028073.690582998],[-4738929.373929892,-1940018.2339984747]]},"properties":null}]}');
+var features = geoJSON.readFeatures('{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"LineString","coordinates":[[-5679576.949701736,3326539.470970871],[4339177.221692885,2025275.50144403],[-5620873.311978721,528332.7395071383],[4887077.840441029,-724011.5319171892],[-5521644.543570097,-198476.98154901946],[3900289.3109738687,-2028073.690582998],[-4738929.373929892,-1940018.2339984747]]},"properties":null}]}');
 ole3.source.addFeatures(features);
 
 /**

@@ -13,7 +13,7 @@ goog.require('ole3.tool.Interaction');
 
 /**
  * Tool for editing features.
- * @param {ol.Collection<ol.Feature>} options
+ * @param {Object} options
  *        Must include features to be editable.
  * @constructor
  * @extends {ole3.tool.Interaction}

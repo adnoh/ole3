@@ -8,7 +8,7 @@ goog.require('ole3.control.ToolI');
 
 /**
  * Base class for tools.
- * @param {[type]} opt_options [description]
+ * @param {Object} opt_options Options for tool.
  * @implements {ole3.control.ToolI}
  * @constructor
  * @extends {goog.events.EventTarget}
@@ -16,15 +16,15 @@ goog.require('ole3.control.ToolI');
 ole3.tool.Tool = function(opt_options) {
     var options = goog.isDef(opt_options) ? opt_options : {};
 
-    this.enableHandler_ = options['enableHandler'] || goog.nullFunction;
-    this.disableHandler_ = options['disableHandler'] || goog.nullFunction;
+    this.enableHandler_ = options.enableHandler || goog.nullFunction;
+    this.disableHandler_ = options.disableHandler || goog.nullFunction;
 
-    var label = options['label'] || 'T';
-    var tooltip = options['tooltip'];
+    var label = options.label || 'T';
+    var tooltip = options.tooltip;
 
     label = goog.isString(label) ? goog.dom.createTextNode(label) : label;
-    var attributes = {}
-    if (tooltip) { attributes['title'] = tooltip; }
+    var attributes = {};
+    if (tooltip) { attributes.title = tooltip; }
 
     this.element_ = goog.dom.createDom(goog.dom.TagName.BUTTON,
             attributes, label);
@@ -50,17 +50,17 @@ ole3.tool.Tool.prototype.getElement = function() {
 /**
  * Handle click on button. Calls activateHandler or deactivateHandler
  * appropriately and changes the toggle status.
- * @param  {[type]} evt [description]
+ * @param  {Object} evt Event descriptor
  * @private
  */
 ole3.tool.Tool.prototype.handleClick_ = function(evt) {
     if (goog.isNull(this.map_)) { return; }
-    var evt = this.active_ ? ole3.control.ToolEventTypes.WILL_DISABLE :
+    var evtT = this.active_ ? ole3.control.ToolEventTypes.WILL_DISABLE :
             ole3.control.ToolEventTypes.WILL_ENABLE;
-    if (!goog.events.dispatchEvent(this, evt)) {
+    if (!goog.events.dispatchEvent(this, evtT)) {
         return;
     }
-    handler = this.active_ ? this.disableHandler_ : this.enableHandler_;
+    var handler = this.active_ ? this.disableHandler_ : this.enableHandler_;
     handler(this.map_);
     this.active_ = !this.active_;
 };
@@ -86,12 +86,13 @@ ole3.tool.Tool.prototype.setMap = function(map) {
     if (this.active_) {
         this.enableHandler_(this.map_);
     }
-}
+};
 
 /**
  * Tool that toggles an interaction.
- * @param {ol.interaction.Interaction} interaction Interaction to be toggled
- * @param {ol.Collection<ol.Feature>} options
+ * @param {function(new:ol.interaction.Interaction, ...)} interaction
+ *        Interaction constructor to be toggled
+ * @param {Object} options
  *        Must include features to be editable.
  * @constructor
  * @extends {ole3.tool.Tool}
@@ -104,12 +105,12 @@ ole3.tool.Interaction = function(interaction, options) {
         enableHandler: goog.bind(this.handleEnable_, this),
         disableHandler: goog.bind(this.handleDisable_, this)
     };
-    if (options['label']) {
-        superOpts['label'] = options['label'];
+    if (options.label) {
+        superOpts.label = options.label;
         goog.object.remove(options, 'label');
     }
-    if (options['tooltip']) {
-        superOpts['tooltip'] = options['tooltip'];
+    if (options.tooltip) {
+        superOpts.tooltip = options.tooltip;
         goog.object.remove(options, 'tooltip');
     }
     goog.base(this, superOpts);

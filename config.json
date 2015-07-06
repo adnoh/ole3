@@ -13,7 +13,8 @@
       "node_modules/openlayers/externs/geojson.js",
       "node_modules/openlayers/externs/proj4js.js",
       "node_modules/openlayers/externs/tilejson.js",
-      "node_modules/openlayers/externs/topojson.js"
+      "node_modules/openlayers/externs/topojson.js",
+      "externs/pomax/Bezier.js"
     ],
     "define": [
       "goog.array.ASSUME_NATIVE_FUNCTIONS=true",
