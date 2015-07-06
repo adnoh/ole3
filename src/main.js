@@ -12,7 +12,8 @@ goog.require('ol.layer.Vector');
 goog.require('ol.source.OSM');
 goog.require('ol.source.Vector');
 goog.require('ole3.control.Toolbar');
-goog.require('ole3.interaction.BezierModify');
+goog.require('ole3.tool.BezierEdit');
+goog.require('ole3.tool.Modify');
 
 
 /**
@@ -47,10 +48,18 @@ ole3.map = new ol.Map({
   })
 });
 
-ole3.map.addControl(new ole3.control.Toolbar());
+var beziertool = new ole3.tool.BezierEdit({
+    features: new ol.Collection(ole3.source.getFeatures())
+});
+var modifytool = new ole3.tool.Modify({
+    features: new ol.Collection(ole3.source.getFeatures())
+});
+
+var tools = new ol.Collection();
+tools.push(beziertool);
+tools.push(modifytool);
+
+ole3.map.addControl(new ole3.control.Toolbar({
+  tools: tools
+}));
 ole3.map.addLayer(ole3.layer);
-ole3.map.addInteraction(
-    new ole3.interaction.BezierModify({
-        features: new ol.Collection(ole3.source.getFeatures())
-    })
-);
