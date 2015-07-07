@@ -37,7 +37,7 @@ goog.require('pomax.Bezier');
 /**
  * Control Point Types
  * @const
- * @enum
+ * @enum {number}
  */
 ole3.bezier.ControlPointType = {
   MAIN: 0,
@@ -470,12 +470,8 @@ ole3.bezier.Curve.prototype.getExtent = function() {
  */
 ole3.bezier.Curve.prototype.splitAt = function(t) {
   var bezierJS = this.getBezierJS_();
-  console.log('2.2');
   var newCurves = bezierJS.split(t);
-  console.log(newCurves);
-  console.log('2.3');
   var newRightBezier = this.fromBezierJS_(newCurves['right']);
-  console.log('2.4');
   this.setFromBezierJS_(newCurves['left']);
   var newHandle =
       new ole3.bezier.Control(this.bezierS_, this, newRightBezier);
@@ -710,9 +706,7 @@ ole3.bezier.CurvePoint = function(bezier, parameter, coordinate) {
 ole3.bezier.CurvePoint.prototype.moveTo = function(coordinate) {
   var bezier = this.bezier_;
   var par = this.parameter_;
-  console.log('2');
   var newHandle = bezier.splitAt(par);
-  console.log('3');
   var newHandlePoint = newHandle.mainHandlePoint();
   return newHandlePoint.moveTo(coordinate);
 };

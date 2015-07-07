@@ -9,7 +9,7 @@ goog.require('ol.css');
 
 /**
  * Event Types that should be emmited by ToolIs
- * @const
+ * @enum {string}
  */
 ole3.control.ToolEventTypes = {
     WILL_ENABLE: 'willEnable',

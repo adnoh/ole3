@@ -1,12 +1,31 @@
 # Open Layers Editor 3
 
-Editor for Open Layers 3. In very early development state.
+The geometry editor for Open Layers 3. This will be the sucessor to the
+famous Open Layers Editor a.k.a. OLE, which was designed to work with
+Open Layers 2. It is a complete reimplementation to leverage the modern
+development tools used by Open Layers 3, such as google's closure compiler.
+In addition to the well known featureset of OLE it adds some new and unique
+features such as the posibility to edit geometries as bezier curves.
 
 ## Features
 
 - Edit LineStings as bezier curves.
 
-## Dependency
+## Usage
+First instanciate the tools you want to use. Then create a new Editor with the given tools and linked to your ol.Map object.
+
+```js
+var tool1 = new ole3.tool.BezierEdit({
+        features: ol.Collection(...)
+    });
+...
+var editor = new ole3.Editor({
+        map: new ol.Map({...}),
+        tools: new ol.Collection([tool1, tool2, ...])
+    });
+```
+
+## Dependencies
 
 - node & npm
 
@@ -20,7 +39,7 @@ npm install
 
 ## Build
 
-Build distributable file. (Experimental)
+Build distributable file.
 
 ```bash
 npm run-script build
@@ -33,4 +52,4 @@ npm run-script build
 npm run-script serve
 ```
 
-Page accesible under localhost:3000
+Page accessible under localhost:3000
