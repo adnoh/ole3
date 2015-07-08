@@ -22,15 +22,17 @@ var mkdirs = function(path) {
 };
 
 var closureify = function(namespace) {
-    var header = "goog.provide('" + namespace + "');(function(){var window={};";
-    var footer = namespace + '=window.' + nonClosureDeps[namespace].obj +
-        ';}());';
+    // var header = "goog.provide('" + namespace + "');(function(){var window={};";
+    var header = "goog.provide('" + namespace + "');\n";
+    // var footer = namespace + '=window.' + nonClosureDeps[namespace].obj + ';}());';
+    var footer = namespace + ' = window.' + nonClosureDeps[namespace].obj + ';\n';
     fs.readFile(nonClosureDeps[namespace].path, 'utf8', function(err, data) {
         if (err) {
             console.log(err);
             return;
         }
-        var closureified = header + data + footer;
+        // var closureified = header + data + footer;
+        var closureified = header + footer;
         var path = filename(namespace);
         mkdirs(p.dirname(path));
         fs.writeFile(path, closureified, {flag: 'w'}, function(err) {

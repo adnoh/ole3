@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "postinstall": "node ./scripts/closurifyDeps.js",
+    "postinstall": "node ./scripts/closurify-deps.js; node ./scripts/generate-ol-externs.js",
     "serve": "node node_modules/openlayers/node_modules/.bin/closure-util serve config.json",
     "build": "node node_modules/openlayers/node_modules/.bin/closure-util build config.json dist/app.js"
   },
