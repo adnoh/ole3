@@ -288,7 +288,7 @@ ole3.bezier.Control.prototype.getClosestHandlePoint =
   var descr = ole3.bezier.ControlPointDescriptor;
   var closestHandlePoint = goog.array.reduce(keys,
       function(last, curr) {
-    var sqDist = ol.coordinate.squaredDistance(cps[curr], coordinate);
+    var sqDist = ole3.lib.olinternals.coordinate.squaredDistance(cps[curr], coordinate);
     if (goog.isDef(last) && sqDist >= last.sqDistance) { return last; }
     var handlePoint =
         new ole3.bezier.ControlPoint(this, curr, cps[curr]);
@@ -498,12 +498,12 @@ ole3.bezier.Curve.prototype.combineWith = function(b) {
 ole3.bezier.Curve.prototype.resetControlPoint = function(i) {
   if (i != 1 && i != 2) { return; }
   var cps = this.controlPoints_;
-  var vecMath = ol.coordinate;
+  var vecMath = ole3.lib.olinternals.coordinate;
   var start = cps[0];
   var end = cps[3];
   var diff = vecMath.sub(end.slice(), start);
   var offset = vecMath.scale(diff, i / 3);
-  this.controlPoints_[i] = vecMath.add(start.slice(), offset);
+  this.controlPoints_[i] = ol.coordinate.add(start.slice(), offset);
   this.createOrUpdateHandles_();
 };
 
@@ -533,7 +533,7 @@ ole3.bezier.Curve.prototype.closestCurvePoint = function(coordinate) {
     closestPoints.push(closestOnSegment);
   }
   var closest = this.getClosestCoordinateIndex_(coordinate, closestPoints);
-  var sqDistFn = ol.coordinate.squaredDistance;
+  var sqDistFn = ole3.lib.olinternals.coordinate.squaredDistance;
   var segmentLength = sqDistFn.apply(null,
       lutPoints.slice(closest.ind, closest.ind + 2));
   var lengthToClosest = sqDistFn(lutPoints[closest.ind],
@@ -549,7 +549,7 @@ ole3.bezier.Curve.prototype.closestCurvePoint = function(coordinate) {
 
 ole3.bezier.Curve.prototype.getClosestCoordinateIndex_ =
     function(needleCoord, haystackCoords) {
-  var sqDistFn = ol.coordinate.squaredDistance;
+  var sqDistFn = ole3.lib.olinternals.coordinate.squaredDistance;
   var closestIndex = -1, minSqDist = -1;
   for (var i = haystackCoords.length - 1; i >= 0; --i) {
     var sqDist = sqDistFn(needleCoord, haystackCoords[i]);

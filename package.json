@@ -39,7 +39,8 @@
           "( *)(split:)": "$1/**\n$1 * @param {number} t1\n$1 * @param {number=} t2\n$1 */\n$1$2",
           "( *)(outline:)": "$1/**\n$1 * @param {?=} d1\n$1 * @param {?=} d2\n$1 * @param {?=} d3\n$1 * @param {?=} d4\n$1 */\n$1$2",
           "(\\s+\\*/\\s+var Bezier = function\\(coords\\))": " @constructor\n *  @param {...?} coords$1",
-          "( *)(var PolyBezier = function\\(curves\\))": "$1/**\n$1 * @constructor\n$1 */\n$1$2"
+          "( *)(var PolyBezier = function\\(curves\\))": "$1/**\n$1 * @constructor\n$1 */\n$1$2",
+          "/\\*\\*\\s+.*\\s+\\* \\@param \\{\\[type\\]\\}.*\\s+\\*/": ""
         }
       },
       "mourner": {
@@ -78,7 +79,7 @@
     "js": [
       "src/**/*.js"
     ],
-    "dist": "dist/lib.js",
+    "dist": "dist/ole3.js",
     "main": "ole3",
     "deps": "src/deps.js",
     "compile": {
@@ -138,6 +139,7 @@
     }
   },
   "devDependencies": {
+    "async": "^1.3.0",
     "mime": "~1.3.4",
     "spawn-sync": "~1.0.11"
   }

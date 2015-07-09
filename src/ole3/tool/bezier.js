@@ -32,7 +32,7 @@ ole3.tool.BezierEdit = function(options) {
 goog.inherits(ole3.tool.BezierEdit, ole3.tool.Tool);
 
 ole3.tool.BezierEdit.prototype.handleEnable_ = function(map) {
-    this.interaction_ = new ole3.interaction.BezierModify(this.opt_, map);
+    this.interaction_ = new ole3.interaction.BezierModify(this.opt_);
     map.addInteraction(this.interaction_);
 };
 

@@ -31,9 +31,9 @@ var includes = function(index, isDebug) {
         return '$1<script src="' + js + '"></script>\n';
     });
     index = index.replace(/( *)(\<\/head\>)/, css.join('') + '$1$2');
-    index = index.replace(
-        /( *)(\<script src="dist\/lib.js" type="text\/javascript"\>\<\/script\>)/,
-        js.join('') + (isDebug ? '<script>goog.require("' + opts.main + '");</script>' : '$1$2'));
+    index = index.replace(/( *)(\<\/body\>)/, js.join('') +
+            (isDebug ? '<script>goog.require("' + opts.main + '");</script>\n' :
+                ''));
     return index;
 };
 

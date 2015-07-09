@@ -95,7 +95,16 @@ ole3.lib.olinternals.coordinate.equals = function(coordinate1, coordinate2) {
   return equals;
 };
 
-
+/**
+ * @param {ol.Coordinate} coord1 First coordinate.
+ * @param {ol.Coordinate} coord2 Second coordinate.
+ * @return {number} Squared distance between coord1 and coord2.
+ */
+ole3.lib.olinternals.coordinate.squaredDistance = function(coord1, coord2) {
+  var dx = coord1[0] - coord2[0];
+  var dy = coord1[1] - coord2[1];
+  return dx * dx + dy * dy;
+};
 
 /**
  * The CSS class for hidden feature.
@@ -213,28 +222,28 @@ ole3.lib.olinternals.style.createDefaultEditingStyles = function() {
   var blue = [0, 153, 255, 1];
   var width = 3;
   styles[ole3.lib.olinternals.geom.GeometryType.POLYGON] = [
-    new ol.style.Style({
+    new ol.style.Style(/** @type {olx.style.StyleOptions} */ ({
       fill: new ol.style.Fill({
         color: [255, 255, 255, 0.5]
       })
-    })
+    }))
   ];
   styles[ole3.lib.olinternals.geom.GeometryType.MULTI_POLYGON] =
       styles[ole3.lib.olinternals.geom.GeometryType.POLYGON];
 
   styles[ole3.lib.olinternals.geom.GeometryType.LINE_STRING] = [
-    new ol.style.Style({
+    new ol.style.Style(/** @type {olx.style.StyleOptions} */ ({
       stroke: new ol.style.Stroke({
         color: white,
         width: width + 2
       })
-    }),
-    new ol.style.Style({
+    })),
+    new ol.style.Style(/** @type {olx.style.StyleOptions} */ ({
       stroke: new ol.style.Stroke({
         color: blue,
         width: width
       })
-    })
+    }))
   ];
   styles[ole3.lib.olinternals.geom.GeometryType.MULTI_LINE_STRING] =
       styles[ole3.lib.olinternals.geom.GeometryType.LINE_STRING];
@@ -246,7 +255,7 @@ ole3.lib.olinternals.style.createDefaultEditingStyles = function() {
 
 
   styles[ole3.lib.olinternals.geom.GeometryType.POINT] = [
-    new ol.style.Style({
+    new ol.style.Style(/** @type {olx.style.StyleOptions} */ ({
       image: new ol.style.Circle({
         radius: width * 2,
         fill: new ol.style.Fill({
@@ -258,7 +267,7 @@ ole3.lib.olinternals.style.createDefaultEditingStyles = function() {
         })
       }),
       zIndex: Infinity
-    })
+    }))
   ];
   styles[ole3.lib.olinternals.geom.GeometryType.MULTI_POINT] =
       styles[ole3.lib.olinternals.geom.GeometryType.POINT];

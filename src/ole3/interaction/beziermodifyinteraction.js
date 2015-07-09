@@ -6,6 +6,7 @@ goog.require('ole3.lib.olinternals.CollectionEventType');
 goog.require('ole3.lib.olinternals.MapBrowserEvent.EventType');
 goog.require('ole3.lib.olinternals.style');
 goog.require('ole3.lib.olinternals.geom.GeometryType');
+goog.require('ole3.lib.olinternals.coordinate');
 // goog.require('ol.Feature');
 // goog.require('ol.FeatureOverlay');
 // goog.require('ol.events.condition');
@@ -21,19 +22,15 @@ goog.require('ole3.wrapper.BezierString');
  * @constructor
  * @extends {ol.interaction.Pointer}
  * @param {olx.interaction.ModifyOptions} options Options
- * @param {ol.Map} map Map for displaying handles.
  */
-ole3.interaction.BezierModify = function(options, map) {
+ole3.interaction.BezierModify = function(options) {
 
   goog.base(this, {
-    handleDownEvent: ole3.interaction.BezierModify.handleDownEvent_,
-    handleDragEvent: ole3.interaction.BezierModify.handleDragEvent_,
-    // handleEvent: ole3.interaction.BezierModify.handleEvent,
-    handleUpEvent: ole3.interaction.BezierModify.handleUpEvent_,
-    handleMoveEvent: ole3.interaction.BezierModify.handlePointerMove_
+        handleDownEvent: goog.bind(this.handleDownEvent_, this),
+        handleDragEvent: goog.bind(this.handleDragEvent_, this),
+        handleUpEvent: goog.bind(this.handleUpEvent_, this),
+        handleMoveEvent: goog.bind(this.handlePointerMove_, this)
   });
-
-  this.map_ = map;
 
   /**
    * @type {ol.events.ConditionType}
@@ -53,16 +50,26 @@ ole3.interaction.BezierModify = function(options, map) {
   this.vertexFeature_ = null;
 
   /**
+   * Wether a curve is currently edited.
+   */
+  this.isDragging_ = false;
+
+  /**
+   * If something changed during the current drag.
+   * @type {boolean}
+   */
+  this.hasDragged_ = false;
+
+  /**
    * Current dragged bezier information
    * @type {ole3.bezier.ControlPointI}
    * @private
    */
   this.currentControl_ = null;
 
-
-  this.handlingDownUpSequence_ = false;
-
   this.lastPixel_ = [0, 0];
+
+  this.map_ = null;
 
   /**
    * Segment RTree for each layer
@@ -103,10 +110,10 @@ ole3.interaction.BezierModify = function(options, map) {
   this.features_ = options.features;
 
   this.features_.forEach(this.addFeature_, this);
-  goog.events.listen(this.features_, ole3.lib.olinternals.CollectionEventType.ADD,
-      this.handleFeatureAdd_, false, this);
-  goog.events.listen(this.features_, ole3.lib.olinternals.CollectionEventType.REMOVE,
-      this.handleFeatureRemove_, false, this);
+  this.features_.on(ole3.lib.olinternals.CollectionEventType.ADD,
+        this.handleFeatureAdd_, this);
+  this.features_.on(ole3.lib.olinternals.CollectionEventType.REMOVE,
+      this.handleFeatureRemove_, this);
 
 };
 goog.inherits(ole3.interaction.BezierModify, ol.interaction.Pointer);
@@ -185,45 +192,11 @@ ole3.interaction.BezierModify.prototype.handleFeatureRemove_ = function(evt) {
   }
 };
 
-/**
- * Handles the {@link ol.MapBrowserEvent map browser event} and may modify the
- * geometry.
- * @param {ol.MapBrowserEvent} mapBrowserEvent Map browser event.
- * @return {boolean} `false` to stop event propagation.
- * @this {ole3.interaction.BezierModify}
- */
-ole3.interaction.BezierModify.handleEvent = function(mapBrowserEvent) {
-  var handled;
-  if (!mapBrowserEvent.map.getView().getHints()[ol.ViewHint.INTERACTING] &&
-      mapBrowserEvent.type == ol.MapBrowserEvent.EventType.POINTERMOVE &&
-      !this.handlingDownUpSequence_) {
-    this.handlePointerMove_(mapBrowserEvent);
-  }
-  if (!goog.isNull(this.vertexFeature_) &&
-      this.deleteCondition_(mapBrowserEvent)) {
-    var geometry = this.vertexFeature_.getGeometry();
-    goog.asserts.assertInstanceof(geometry, ol.geom.Point,
-        'geometry should be an ol.geom.Point');
-    handled = this.removeVertex_();
-  }
-  return ol.interaction.Pointer.handleEvent.call(this, mapBrowserEvent) &&
-      !handled;
-};
-
 ole3.interaction.BezierModify.prototype.removeVertex_ = function() {
   var cp = this.currentControl_;
   this.currentControl_ = cp.remove();
   this.updateVertexFeature_();
   return !this.currentControl_;
-};
-
-/**
- * @param {ol.MapBrowserEvent} evt Event.
- * @private
- */
-ole3.interaction.BezierModify.prototype.handlePointerMove_ = function(evt) {
-  console.log(evt);
-  this.handlePointerAtPixel_(evt.pixel, evt.map);
 };
 
 /**
@@ -271,7 +244,7 @@ ole3.interaction.BezierModify.prototype.handlePointerAtPixel_ =
 ole3.interaction.BezierModify.prototype.pixelDistance_ = function(coord1, coord2, map) {
   var c1Pixel = map.getPixelFromCoordinate(coord1);
   var c2Pixel = map.getPixelFromCoordinate(coord2);
-  return Math.sqrt(ol.coordinate.squaredDistance(c1Pixel, c2Pixel));
+  return Math.sqrt(ole3.lib.olinternals.coordinate.squaredDistance(c1Pixel, c2Pixel));
 };
 
 /**
@@ -337,15 +310,22 @@ ole3.interaction.BezierModify.prototype.handleRemoveHandle_ = function(evt) {
 };
 
 /**
- * @param {ol.MapBrowserPointerEvent} evt Event.
- * @return {boolean} Start drag sequence?
- * @this {ole3.interaction.BezierModify}
+ * @param {ol.MapBrowserEvent} evt Event.
  * @private
  */
-ole3.interaction.BezierModify.handleDownEvent_ = function(evt) {
-  console.log(evt);
+ole3.interaction.BezierModify.prototype.handlePointerMove_ = function(evt) {
+  if (this.isDragging_) { return; }
+  this.handlePointerAtPixel_(evt.pixel, evt.map);
+};
+
+/**
+ * @param {ol.MapBrowserPointerEvent} evt Event.
+ * @return {boolean} Start drag sequence?
+ * @private
+ */
+ole3.interaction.BezierModify.prototype.handleDownEvent_ = function(evt) {
   if (!goog.isNull(this.vertexFeature_)) {
-    this.handlingDownUpSequence_ = true;
+    this.isDragging_ = true;
     return true;
   }
   else {
@@ -355,32 +335,35 @@ ole3.interaction.BezierModify.handleDownEvent_ = function(evt) {
 
 /**
  * @param {ol.MapBrowserPointerEvent} evt Event.
- * @this {ole3.interaction.BezierModify}
  * @private
  */
-ole3.interaction.BezierModify.handleDragEvent_ = function(evt) {
-  console.log(evt);
+ole3.interaction.BezierModify.prototype.handleDragEvent_ = function(evt) {
   var cp = this.currentControl_;
   var coordinate = evt.coordinate;
   this.currentControl_ = cp.moveTo(coordinate);
   this.updateVertexFeature_();
+  this.hasDragged_ = true;
 };
 
 /**
  * @param {ol.MapBrowserPointerEvent} evt Event.
- * @return {boolean} Start drag sequence?
- * @this {ole3.interaction.BezierModify}
+ * @return {boolean} Continue drag sequence?
  * @private
  */
-ole3.interaction.BezierModify.handleUpEvent_ = function(evt) {
-  console.log(evt);
-  if (this.handlingDownUpSequence_ == true) {
-    var affected = this.currentControl_.getBezierString();
-    var rBush = this.rBush_;
-    rBush.update(affected.getExtent(), affected);
-    this.handlingDownUpSequence_ = false;
+ole3.interaction.BezierModify.prototype.handleUpEvent_ = function(evt) {
+  var affected = this.currentControl_.getBezierString();
+  if (!this.hasDragged_ /* && this.deleteCondition_(evt) */) {
+    this.removeVertex_();
   }
-  return true;
+  var rBush = this.rBush_;
+  rBush.update(affected.getExtent(), affected);
+  this.isDragging_ = this.hasDragged_ = false;
+  return false;
+};
+
+ole3.interaction.BezierModify.prototype.setMap = function(map) {
+  this.overlay_.setMap(map);
+  this.map_ = map;
 };
 
 /**

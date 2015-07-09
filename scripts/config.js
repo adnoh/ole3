@@ -95,6 +95,7 @@ var getCompileOptions = function() {
     opt.js = getAbsoluteJs(statics);
     opt.js.push.apply(opt.js, globArray(pjson.config.js));
     opt.externs = getAbsoluteExtern(externs);
+    opt.js_output_file = resolve(p.join('..', pjson.config.dist));
     return opt;
 };
 
