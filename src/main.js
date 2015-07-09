@@ -1,13 +1,13 @@
 goog.provide('ole3');
 
-goog.require('ol.Collection');
-goog.require('ol.Map');
-goog.require('ol.View');
-goog.require('ol.format.GeoJSON');
-goog.require('ol.layer.Tile');
-goog.require('ol.layer.Vector');
-goog.require('ol.source.OSM');
-goog.require('ol.source.Vector');
+// goog.require('ol.Collection');
+// goog.require('ol.Map');
+// goog.require('ol.View');
+// goog.require('ol.format.GeoJSON');
+// goog.require('ol.layer.Tile');
+// goog.require('ol.layer.Vector');
+// goog.require('ol.source.OSM');
+// goog.require('ol.source.Vector');
 goog.require('ole3.Editor');
 goog.require('ole3.tool.BezierEdit');
 goog.require('ole3.tool.Modify');
@@ -18,9 +18,8 @@ goog.require('ole3.tool.Modify');
 
 var src = new ol.source.Vector();
 
-var layer = new ol.layer.Vector({
-    source: src
-});
+var layer = new ol.layer.Vector();
+layer.setSource(src);
 
 var geoJSON = new ol.format.GeoJSON();
 var features = geoJSON.readFeatures('{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"LineString","coordinates":[[-5679576.949701736,3326539.470970871],[4339177.221692885,2025275.50144403],[-5620873.311978721,528332.7395071383],[4887077.840441029,-724011.5319171892],[-5521644.543570097,-198476.98154901946],[3900289.3109738687,-2028073.690582998],[-4738929.373929892,-1940018.2339984747]]},"properties":null}]}');
@@ -36,7 +35,8 @@ var map = new ol.Map({
   ],
   view: new ol.View({
     center: [0, 0],
-    zoom: 4
+    zoom: 4,
+    'undefined': {} // Fix for faulty externs generator of open layers.
   })
 });
 

@@ -1,14 +1,19 @@
 goog.provide('ole3.interaction.BezierModify');
 
 goog.require('goog.functions');
-goog.require('ol.Collection');
-goog.require('ol.Feature');
-goog.require('ol.FeatureOverlay');
-goog.require('ol.events.condition');
-goog.require('ol.geom.Point');
-goog.require('ol.interaction.Pointer');
-goog.require('ol.structs.RBush');
+// goog.require('ol.Collection');
+goog.require('ole3.lib.olinternals.CollectionEventType');
+goog.require('ole3.lib.olinternals.MapBrowserEvent.EventType');
+goog.require('ole3.lib.olinternals.style');
+goog.require('ole3.lib.olinternals.geom.GeometryType');
+// goog.require('ol.Feature');
+// goog.require('ol.FeatureOverlay');
+// goog.require('ol.events.condition');
+// goog.require('ol.geom.Point');
+// goog.require('ol.interaction.Pointer');
+goog.require('ole3.structs.RBush');
 goog.require('ole3.wrapper.BezierString');
+
 
 /**
  * Interaction for modifiying LineStrings as bezier curves.
@@ -16,15 +21,19 @@ goog.require('ole3.wrapper.BezierString');
  * @constructor
  * @extends {ol.interaction.Pointer}
  * @param {olx.interaction.ModifyOptions} options Options
+ * @param {ol.Map} map Map for displaying handles.
  */
-ole3.interaction.BezierModify = function(options) {
+ole3.interaction.BezierModify = function(options, map) {
 
   goog.base(this, {
     handleDownEvent: ole3.interaction.BezierModify.handleDownEvent_,
     handleDragEvent: ole3.interaction.BezierModify.handleDragEvent_,
-    handleEvent: ole3.interaction.BezierModify.handleEvent,
-    handleUpEvent: ole3.interaction.BezierModify.handleUpEvent_
+    // handleEvent: ole3.interaction.BezierModify.handleEvent,
+    handleUpEvent: ole3.interaction.BezierModify.handleUpEvent_,
+    handleMoveEvent: ole3.interaction.BezierModify.handlePointerMove_
   });
+
+  this.map_ = map;
 
   /**
    * @type {ol.events.ConditionType}
@@ -53,14 +62,14 @@ ole3.interaction.BezierModify = function(options) {
 
   this.handlingDownUpSequence_ = false;
 
-  this.lastPixel_ = null;
+  this.lastPixel_ = [0, 0];
 
   /**
    * Segment RTree for each layer
-   * @type {Object.<*, ol.structs.RBush>}
+   * @type {Object.<*, ole3.structs.RBush>}
    * @private
    */
-  this.rBush_ = new ol.structs.RBush();
+  this.rBush_ = new ole3.structs.RBush();
 
   /**
    * @type {number}
@@ -74,10 +83,9 @@ ole3.interaction.BezierModify = function(options) {
    * @type {ol.FeatureOverlay}
    * @private
    */
-  this.overlay_ = new ol.FeatureOverlay({
-    style: goog.isDef(options.style) ? options.style :
-        ole3.interaction.BezierModify.getDefaultStyleFunction()
-  });
+  this.overlay_ = new ol.FeatureOverlay();
+  this.overlay_.setStyle(goog.isDef(options.style) ? options.style :
+        ole3.interaction.BezierModify.getDefaultStyleFunction())
 
   /**
   * @const
@@ -95,9 +103,9 @@ ole3.interaction.BezierModify = function(options) {
   this.features_ = options.features;
 
   this.features_.forEach(this.addFeature_, this);
-  goog.events.listen(this.features_, ol.CollectionEventType.ADD,
+  goog.events.listen(this.features_, ole3.lib.olinternals.CollectionEventType.ADD,
       this.handleFeatureAdd_, false, this);
-  goog.events.listen(this.features_, ol.CollectionEventType.REMOVE,
+  goog.events.listen(this.features_, ole3.lib.olinternals.CollectionEventType.REMOVE,
       this.handleFeatureRemove_, false, this);
 
 };
@@ -113,7 +121,7 @@ ole3.interaction.BezierModify.prototype.addFeature_ = function(feature) {
     this.BEZIER_CURVE_WRITERS_[geometry.getType()].
         call(this, feature, geometry);
   }
-  var map = this.getMap();
+  var map = this.map_;
   if (!goog.isNull(map)) {
     this.handlePointerAtPixel_(this.lastPixel_, map);
   }
@@ -142,13 +150,14 @@ ole3.interaction.BezierModify.prototype.removeFeature_ =
   }
 };
 
-/**
- * @inheritDoc
- */
-ole3.interaction.BezierModify.prototype.setMap = function(map) {
-  this.overlay_.setMap(map);
-  goog.base(this, 'setMap', map);
-};
+// /**
+//  * @inheritDoc
+//  */
+// ole3.interaction.BezierModify.prototype.setMap = function(map) {
+//   this.overlay_.setMap(map);
+//   this.map_ = map;
+//   goog.base(this, 'setMap', map);
+// };
 
 /**
  * @param {ol.CollectionEvent} evt Event.
@@ -213,6 +222,7 @@ ole3.interaction.BezierModify.prototype.removeVertex_ = function() {
  * @private
  */
 ole3.interaction.BezierModify.prototype.handlePointerMove_ = function(evt) {
+  console.log(evt);
   this.handlePointerAtPixel_(evt.pixel, evt.map);
 };
 
@@ -333,6 +343,7 @@ ole3.interaction.BezierModify.prototype.handleRemoveHandle_ = function(evt) {
  * @private
  */
 ole3.interaction.BezierModify.handleDownEvent_ = function(evt) {
+  console.log(evt);
   if (!goog.isNull(this.vertexFeature_)) {
     this.handlingDownUpSequence_ = true;
     return true;
@@ -348,6 +359,7 @@ ole3.interaction.BezierModify.handleDownEvent_ = function(evt) {
  * @private
  */
 ole3.interaction.BezierModify.handleDragEvent_ = function(evt) {
+  console.log(evt);
   var cp = this.currentControl_;
   var coordinate = evt.coordinate;
   this.currentControl_ = cp.moveTo(coordinate);
@@ -361,6 +373,7 @@ ole3.interaction.BezierModify.handleDragEvent_ = function(evt) {
  * @private
  */
 ole3.interaction.BezierModify.handleUpEvent_ = function(evt) {
+  console.log(evt);
   if (this.handlingDownUpSequence_ == true) {
     var affected = this.currentControl_.getBezierString();
     var rBush = this.rBush_;
@@ -374,11 +387,11 @@ ole3.interaction.BezierModify.handleUpEvent_ = function(evt) {
  * @return {ol.style.StyleFunction} Styles.
  */
 ole3.interaction.BezierModify.getDefaultStyleFunction = function() {
-  var style = ol.style.createDefaultEditingStyles();
+  var style = ole3.lib.olinternals.style.createDefaultEditingStyles();
   return function(feature, resolution) {
-    if (feature.getGeometry().getType() == ol.geom.GeometryType.LINE_STRING) {
-      return style[ol.geom.GeometryType.LINE_STRING];
+    if (feature.getGeometry().getType() == ole3.lib.olinternals.geom.GeometryType.LINE_STRING) {
+      return style[ole3.lib.olinternals.geom.GeometryType.LINE_STRING];
     }
-    return style[ol.geom.GeometryType.POINT];
+    return style[ole3.lib.olinternals.geom.GeometryType.POINT];
   };
 };

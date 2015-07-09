@@ -12,14 +12,14 @@ goog.provide('ole3.wrapper.BezierString');
 goog.require('goog.array');
 goog.require('goog.functions');
 goog.require('goog.object');
-goog.require('ol.Collection');
-goog.require('ol.Feature');
-goog.require('ol.Object');
-goog.require('ol.coordinate');
-goog.require('ol.extent');
-goog.require('ol.geom.LineString');
-goog.require('ol.structs.RBush');
-goog.require('pomax.Bezier');
+// goog.require('ol.Collection');
+// goog.require('ol.Feature');
+// goog.require('ol.Object');
+goog.require('ole3.lib.olinternals.coordinate');
+// goog.require('ol.extent');
+// goog.require('ol.geom.LineString');
+goog.require('ole3.structs.RBush');
+goog.require('pomax');
 
 
 /**
@@ -325,7 +325,7 @@ ole3.bezier.Control.prototype.getControlPoints = function() {
     if (!goog.object.containsKey(cps, ole3.bezier.ControlPointType.MAIN)) {
       cps[ole3.bezier.ControlPointType.MAIN] = rightCps[0];
     } else {
-      goog.asserts.assert(ol.coordinate.equals(rightCps[0],
+      goog.asserts.assert(ole3.lib.olinternals.coordinate.equals(rightCps[0],
         cps[ole3.bezier.ControlPointType.MAIN]),
         'Adjacent bezier curves should be connected.');
     }
@@ -514,10 +514,10 @@ ole3.bezier.Curve.prototype.getGeometry = function() {
 ole3.bezier.Curve.prototype.changeControlPoint = function(index, newValue) {
   if (index == 0) {
     ol.coordinate.add(this.controlPoints_[1],
-        ol.coordinate.sub(newValue.slice(), this.controlPoints_[0]));
+        ole3.lib.olinternals.coordinate.sub(newValue.slice(), this.controlPoints_[0]));
   } else if (index == 3) {
     ol.coordinate.add(this.controlPoints_[2],
-        ol.coordinate.sub(newValue.slice(), this.controlPoints_[3]));
+        ole3.lib.olinternals.coordinate.sub(newValue.slice(), this.controlPoints_[3]));
   }
   this.controlPoints_[index] = newValue;
   this.createOrUpdateHandles_();
@@ -529,7 +529,7 @@ ole3.bezier.Curve.prototype.closestCurvePoint = function(coordinate) {
   var closestPoints = [];
   for (var i = 0; i < precision; i++) {
     var segment = lutPoints.slice(i, i + 2);
-    var closestOnSegment = ol.coordinate.closestOnSegment(coordinate, segment);
+    var closestOnSegment = ole3.lib.olinternals.coordinate.closestOnSegment(coordinate, segment);
     closestPoints.push(closestOnSegment);
   }
   var closest = this.getClosestCoordinateIndex_(coordinate, closestPoints);
@@ -600,9 +600,9 @@ ole3.bezier.Curve.prototype.getControlPoints = function() {
 
 ole3.bezier.Curve.prototype.isLine_ = function() {
   var cps = this.controlPoints_;
-  var v1 = ol.coordinate.sub(cps[1].slice(), cps[0]);
-  var v2 = ol.coordinate.sub(cps[2].slice(), cps[0]);
-  var v3 = ol.coordinate.sub(cps[3].slice(), cps[0]);
+  var v1 = ole3.lib.olinternals.coordinate.sub(cps[1].slice(), cps[0]);
+  var v2 = ole3.lib.olinternals.coordinate.sub(cps[2].slice(), cps[0]);
+  var v3 = ole3.lib.olinternals.coordinate.sub(cps[3].slice(), cps[0]);
   return this.areParalell_(v3, v1) && this.areParalell_(v3, v2);
 };
 
@@ -634,7 +634,7 @@ ole3.bezier.Curve.prototype.fromBezierJS_ = function(c) {
 
 /**
  * Updates this Curve based on the ControlPoints of c
- * @param {pomax.Bezier} c The BezierJS curve that controlpoints should be used.
+ * @param {?} c The BezierJS curve that controlpoints should be used.
  * @private
  */
 ole3.bezier.Curve.prototype.setFromBezierJS_ = function(c) {
@@ -751,10 +751,10 @@ ole3.wrapper.BezierString = function(feature) {
 
   /**
    * All Handles of this BezierString
-   * @type {ol.structs.RBush<ole3.bezier.ControlPointProviderI>}
+   * @type {ole3.structs.RBush<ole3.bezier.ControlPointProviderI>}
    * @private
    */
-  this.rBush_ = new ol.structs.RBush();
+  this.rBush_ = new ole3.structs.RBush();
 
   var bezierDesc = this.feature_.get('bezier');
   if (!bezierDesc) {
@@ -982,12 +982,12 @@ ole3.wrapper.BezierString.prototype.loadFromControlPoints_ = function(cps) {
 
 ole3.wrapper.BezierString.prototype.controlPointsForSegment_ =
     function(start, end) {
-  var diff = ol.coordinate.sub(end.slice(), start);
-  ol.coordinate.scale(diff, 1 / 3);
+  var diff = ole3.lib.olinternals.coordinate.sub(end.slice(), start);
+  ole3.lib.olinternals.coordinate.scale(diff, 1 / 3);
   return [
     start,
     ol.coordinate.add(start.slice(), diff),
-    ol.coordinate.sub(end.slice(), diff),
+    ole3.lib.olinternals.coordinate.sub(end.slice(), diff),
     end
   ];
 };

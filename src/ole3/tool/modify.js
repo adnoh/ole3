@@ -8,7 +8,7 @@
 
 goog.provide('ole3.tool.Modify');
 
-goog.require('ol.interaction.Modify');
+// goog.require('ol.interaction.Modify');
 goog.require('ole3.tool.Interaction');
 
 /**

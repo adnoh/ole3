@@ -3,9 +3,10 @@ goog.provide('ole3.control.Toolbar');
 
 goog.require('goog.dom');
 goog.require('goog.events');
-goog.require('ol.Collection');
-goog.require('ol.control.Control');
-goog.require('ol.css');
+// goog.require('ol.Collection');
+// goog.require('ol.control.Control');
+goog.require('ole3.lib.olinternals.css');
+
 
 /**
  * Event Types that should be emmited by ToolIs
@@ -50,7 +51,7 @@ ole3.control.Toolbar = function(opt_options) {
     var options = goog.isDef(opt_options) ? opt_options : {};
 
     var toolbar = goog.dom.createDom(goog.dom.TagName.DIV, 'ole3-toolbar ' +
-            ol.css.CLASS_UNSELECTABLE + ' ' + ol.css.CLASS_CONTROL);
+            ole3.lib.olinternals.css.CLASS_UNSELECTABLE + ' ' + ole3.lib.olinternals.css.CLASS_CONTROL);
 
     this.tools_ = /** @type {ol.Collection.<ole3.control.ToolI>} */
             (options.tools || new ol.Collection());
