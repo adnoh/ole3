@@ -282,8 +282,10 @@ ole3.interaction.BezierModify.prototype.writeLineStringGeometry_ =
   var bezierString = new ole3.wrapper.BezierString(feature);
   var handles = bezierString.getHandleFeatures();
   handles.forEach(this.addHandle_, this);
-  handles.on('add', this.handleAddHandle_, this);
-  handles.on('remove', this.handleRemoveHandle_, this);
+  handles.on(ole3.lib.olinternals.CollectionEventType.ADD,
+      this.handleAddHandle_, this);
+  handles.on(ole3.lib.olinternals.CollectionEventType.REMOVE,
+      this.handleRemoveHandle_, this);
   this.indexBezierString_(bezierString);
 };
 

@@ -471,8 +471,8 @@ ole3.bezier.Curve.prototype.getExtent = function() {
 ole3.bezier.Curve.prototype.splitAt = function(t) {
   var bezierJS = this.getBezierJS_();
   var newCurves = bezierJS.split(t);
-  var newRightBezier = this.fromBezierJS_(newCurves['right']);
-  this.setFromBezierJS_(newCurves['left']);
+  var newRightBezier = this.fromBezierJS_(newCurves.right);
+  this.setFromBezierJS_(newCurves.left);
   var newHandle =
       new ole3.bezier.Control(this.bezierS_, this, newRightBezier);
   this.bezierS_.insertHandle(newHandle);
@@ -507,6 +507,10 @@ ole3.bezier.Curve.prototype.resetControlPoint = function(i) {
   this.createOrUpdateHandles_();
 };
 
+/**
+ * [getGeometry description]
+ * @return {Array<ol.Coordinate>} Current geometry.
+ */
 ole3.bezier.Curve.prototype.getGeometry = function() {
   return this.getLUT_();
 };
@@ -618,6 +622,14 @@ ole3.bezier.Curve.prototype.getLUT_ = function() {
   }
   var PRECISION = 100;
   var bezierJS = this.getBezierJS_();
+  /**
+   *  Following line is a fix for the wierdest bug ever:
+   *  if not given this code stil works uncompiled _AND_ in ADVANCED-compiled
+   *  version with using --debug flag. But changing th geometry does not
+   *  work if ADVANCED compiled without debug flag.
+   *  Horror to debug! And it does not make any sense at all...
+   */
+  this.fromBezierJSCoord_ = this.fromBezierJSCoord_;
   return goog.array.map(bezierJS.getLUT(PRECISION), this.fromBezierJSCoord_);
 };
 
@@ -628,7 +640,7 @@ ole3.bezier.Curve.prototype.getBezierJS_ = function() {
 };
 
 ole3.bezier.Curve.prototype.fromBezierJS_ = function(c) {
-  var controlPoints = goog.array.map(c['points'], this.fromBezierJSCoord_);
+  var controlPoints = goog.array.map(c.points, this.fromBezierJSCoord_);
   return new this.constructor(controlPoints, this.bezierS_);
 };
 
@@ -638,16 +650,21 @@ ole3.bezier.Curve.prototype.fromBezierJS_ = function(c) {
  * @private
  */
 ole3.bezier.Curve.prototype.setFromBezierJS_ = function(c) {
-  this.controlPoints_ = goog.array.map(c['points'], this.fromBezierJSCoord_);
+  this.controlPoints_ = goog.array.map(c.points, this.fromBezierJSCoord_);
   this.createOrUpdateHandles_();
 };
 
 ole3.bezier.Curve.prototype.toBezierJSCoord_ = function(coordinate) {
-  return {'x': coordinate[0], 'y': coordinate[1]};
+  return {x: coordinate[0], y: coordinate[1]};
 };
 
+/**
+ * [fromBezierJSCoord_ description]
+ * @param  {{x: number, y: number}} bezierJSCoord [description]
+ * @return {ol.Coordinate}               [description]
+ */
 ole3.bezier.Curve.prototype.fromBezierJSCoord_ = function(bezierJSCoord) {
-  return [bezierJSCoord['x'], bezierJSCoord['y']];
+  return [bezierJSCoord.x, bezierJSCoord.y];
 };
 
 ole3.bezier.Curve.prototype.createOrUpdateHandles_ = function() {
@@ -746,6 +763,9 @@ ole3.wrapper.BezierString = function(feature) {
       'feature must be an ol.Feature');
 
   this.handleFeatures_ = new ol.Collection();
+  /**
+   * @type {Array<ole3.bezier.Curve>}
+   */
   this.beziers_ = [];
   this.handles_ = [];
 

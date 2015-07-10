@@ -93,6 +93,7 @@
       ],
       "compilation_level": "ADVANCED_OPTIMIZATIONS",
       "closure_entry_point": "ole3",
+      "generate_exports": true,
       "only_closure_dependencies": true,
       "jscomp_error": [
         "accessControls",

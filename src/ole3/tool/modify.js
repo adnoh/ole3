@@ -17,6 +17,7 @@ goog.require('ole3.tool.Interaction');
  *        Must include features to be editable.
  * @constructor
  * @extends {ole3.tool.Interaction}
+ * @export
  */
 ole3.tool.Modify = function(options) {
     var superOpts = {

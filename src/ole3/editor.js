@@ -35,9 +35,9 @@ ole3.editor.Options = {};
  * @export
  */
 ole3.Editor = function(options) {
-    this.map_ = options.map;
+    this.map_ = options['map'];
     this.toolbar_ = new ole3.control.Toolbar({
-        tools: options.tools
+        tools: options['tools']
     });
     this.map_.addControl(this.toolbar_);
 };

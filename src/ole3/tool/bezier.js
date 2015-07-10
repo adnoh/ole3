@@ -17,6 +17,7 @@ goog.require('ole3.tool.Tool');
  *        Must include features to be editable.
  * @constructor
  * @extends {ole3.tool.Tool}
+ * @export
  */
 ole3.tool.BezierEdit = function(options) {
     this.opt_ = options;
