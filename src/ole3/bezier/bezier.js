@@ -12,14 +12,14 @@ goog.provide('ole3.wrapper.BezierString');
 goog.require('goog.array');
 goog.require('goog.functions');
 goog.require('goog.object');
-goog.require('ol.Collection');
-goog.require('ol.Feature');
-goog.require('ol.Object');
-goog.require('ol.coordinate');
-goog.require('ol.extent');
-goog.require('ol.geom.LineString');
-goog.require('ol.structs.RBush');
-goog.require('pomax.Bezier');
+// goog.require('ol.Collection');
+// goog.require('ol.Feature');
+// goog.require('ol.Object');
+goog.require('ole3.lib.olinternals.coordinate');
+// goog.require('ol.extent');
+// goog.require('ol.geom.LineString');
+goog.require('ole3.structs.RBush');
+goog.require('pomax');
 
 
 /**
@@ -288,7 +288,7 @@ ole3.bezier.Control.prototype.getClosestHandlePoint =
   var descr = ole3.bezier.ControlPointDescriptor;
   var closestHandlePoint = goog.array.reduce(keys,
       function(last, curr) {
-    var sqDist = ol.coordinate.squaredDistance(cps[curr], coordinate);
+    var sqDist = ole3.lib.olinternals.coordinate.squaredDistance(cps[curr], coordinate);
     if (goog.isDef(last) && sqDist >= last.sqDistance) { return last; }
     var handlePoint =
         new ole3.bezier.ControlPoint(this, curr, cps[curr]);
@@ -325,7 +325,7 @@ ole3.bezier.Control.prototype.getControlPoints = function() {
     if (!goog.object.containsKey(cps, ole3.bezier.ControlPointType.MAIN)) {
       cps[ole3.bezier.ControlPointType.MAIN] = rightCps[0];
     } else {
-      goog.asserts.assert(ol.coordinate.equals(rightCps[0],
+      goog.asserts.assert(ole3.lib.olinternals.coordinate.equals(rightCps[0],
         cps[ole3.bezier.ControlPointType.MAIN]),
         'Adjacent bezier curves should be connected.');
     }
@@ -471,8 +471,8 @@ ole3.bezier.Curve.prototype.getExtent = function() {
 ole3.bezier.Curve.prototype.splitAt = function(t) {
   var bezierJS = this.getBezierJS_();
   var newCurves = bezierJS.split(t);
-  var newRightBezier = this.fromBezierJS_(newCurves['right']);
-  this.setFromBezierJS_(newCurves['left']);
+  var newRightBezier = this.fromBezierJS_(newCurves.right);
+  this.setFromBezierJS_(newCurves.left);
   var newHandle =
       new ole3.bezier.Control(this.bezierS_, this, newRightBezier);
   this.bezierS_.insertHandle(newHandle);
@@ -498,15 +498,19 @@ ole3.bezier.Curve.prototype.combineWith = function(b) {
 ole3.bezier.Curve.prototype.resetControlPoint = function(i) {
   if (i != 1 && i != 2) { return; }
   var cps = this.controlPoints_;
-  var vecMath = ol.coordinate;
+  var vecMath = ole3.lib.olinternals.coordinate;
   var start = cps[0];
   var end = cps[3];
   var diff = vecMath.sub(end.slice(), start);
   var offset = vecMath.scale(diff, i / 3);
-  this.controlPoints_[i] = vecMath.add(start.slice(), offset);
+  this.controlPoints_[i] = ol.coordinate.add(start.slice(), offset);
   this.createOrUpdateHandles_();
 };
 
+/**
+ * [getGeometry description]
+ * @return {Array<ol.Coordinate>} Current geometry.
+ */
 ole3.bezier.Curve.prototype.getGeometry = function() {
   return this.getLUT_();
 };
@@ -514,10 +518,10 @@ ole3.bezier.Curve.prototype.getGeometry = function() {
 ole3.bezier.Curve.prototype.changeControlPoint = function(index, newValue) {
   if (index == 0) {
     ol.coordinate.add(this.controlPoints_[1],
-        ol.coordinate.sub(newValue.slice(), this.controlPoints_[0]));
+        ole3.lib.olinternals.coordinate.sub(newValue.slice(), this.controlPoints_[0]));
   } else if (index == 3) {
     ol.coordinate.add(this.controlPoints_[2],
-        ol.coordinate.sub(newValue.slice(), this.controlPoints_[3]));
+        ole3.lib.olinternals.coordinate.sub(newValue.slice(), this.controlPoints_[3]));
   }
   this.controlPoints_[index] = newValue;
   this.createOrUpdateHandles_();
@@ -529,11 +533,11 @@ ole3.bezier.Curve.prototype.closestCurvePoint = function(coordinate) {
   var closestPoints = [];
   for (var i = 0; i < precision; i++) {
     var segment = lutPoints.slice(i, i + 2);
-    var closestOnSegment = ol.coordinate.closestOnSegment(coordinate, segment);
+    var closestOnSegment = ole3.lib.olinternals.coordinate.closestOnSegment(coordinate, segment);
     closestPoints.push(closestOnSegment);
   }
   var closest = this.getClosestCoordinateIndex_(coordinate, closestPoints);
-  var sqDistFn = ol.coordinate.squaredDistance;
+  var sqDistFn = ole3.lib.olinternals.coordinate.squaredDistance;
   var segmentLength = sqDistFn.apply(null,
       lutPoints.slice(closest.ind, closest.ind + 2));
   var lengthToClosest = sqDistFn(lutPoints[closest.ind],
@@ -549,7 +553,7 @@ ole3.bezier.Curve.prototype.closestCurvePoint = function(coordinate) {
 
 ole3.bezier.Curve.prototype.getClosestCoordinateIndex_ =
     function(needleCoord, haystackCoords) {
-  var sqDistFn = ol.coordinate.squaredDistance;
+  var sqDistFn = ole3.lib.olinternals.coordinate.squaredDistance;
   var closestIndex = -1, minSqDist = -1;
   for (var i = haystackCoords.length - 1; i >= 0; --i) {
     var sqDist = sqDistFn(needleCoord, haystackCoords[i]);
@@ -600,9 +604,9 @@ ole3.bezier.Curve.prototype.getControlPoints = function() {
 
 ole3.bezier.Curve.prototype.isLine_ = function() {
   var cps = this.controlPoints_;
-  var v1 = ol.coordinate.sub(cps[1].slice(), cps[0]);
-  var v2 = ol.coordinate.sub(cps[2].slice(), cps[0]);
-  var v3 = ol.coordinate.sub(cps[3].slice(), cps[0]);
+  var v1 = ole3.lib.olinternals.coordinate.sub(cps[1].slice(), cps[0]);
+  var v2 = ole3.lib.olinternals.coordinate.sub(cps[2].slice(), cps[0]);
+  var v3 = ole3.lib.olinternals.coordinate.sub(cps[3].slice(), cps[0]);
   return this.areParalell_(v3, v1) && this.areParalell_(v3, v2);
 };
 
@@ -618,6 +622,14 @@ ole3.bezier.Curve.prototype.getLUT_ = function() {
   }
   var PRECISION = 100;
   var bezierJS = this.getBezierJS_();
+  /**
+   *  Following line is a fix for the wierdest bug ever:
+   *  if not given this code stil works uncompiled _AND_ in ADVANCED-compiled
+   *  version with using --debug flag. But changing th geometry does not
+   *  work if ADVANCED compiled without debug flag.
+   *  Horror to debug! And it does not make any sense at all...
+   */
+  this.fromBezierJSCoord_ = this.fromBezierJSCoord_;
   return goog.array.map(bezierJS.getLUT(PRECISION), this.fromBezierJSCoord_);
 };
 
@@ -628,26 +640,31 @@ ole3.bezier.Curve.prototype.getBezierJS_ = function() {
 };
 
 ole3.bezier.Curve.prototype.fromBezierJS_ = function(c) {
-  var controlPoints = goog.array.map(c['points'], this.fromBezierJSCoord_);
+  var controlPoints = goog.array.map(c.points, this.fromBezierJSCoord_);
   return new this.constructor(controlPoints, this.bezierS_);
 };
 
 /**
  * Updates this Curve based on the ControlPoints of c
- * @param {pomax.Bezier} c The BezierJS curve that controlpoints should be used.
+ * @param {?} c The BezierJS curve that controlpoints should be used.
  * @private
  */
 ole3.bezier.Curve.prototype.setFromBezierJS_ = function(c) {
-  this.controlPoints_ = goog.array.map(c['points'], this.fromBezierJSCoord_);
+  this.controlPoints_ = goog.array.map(c.points, this.fromBezierJSCoord_);
   this.createOrUpdateHandles_();
 };
 
 ole3.bezier.Curve.prototype.toBezierJSCoord_ = function(coordinate) {
-  return {'x': coordinate[0], 'y': coordinate[1]};
+  return {x: coordinate[0], y: coordinate[1]};
 };
 
+/**
+ * [fromBezierJSCoord_ description]
+ * @param  {{x: number, y: number}} bezierJSCoord [description]
+ * @return {ol.Coordinate}               [description]
+ */
 ole3.bezier.Curve.prototype.fromBezierJSCoord_ = function(bezierJSCoord) {
-  return [bezierJSCoord['x'], bezierJSCoord['y']];
+  return [bezierJSCoord.x, bezierJSCoord.y];
 };
 
 ole3.bezier.Curve.prototype.createOrUpdateHandles_ = function() {
@@ -746,15 +763,18 @@ ole3.wrapper.BezierString = function(feature) {
       'feature must be an ol.Feature');
 
   this.handleFeatures_ = new ol.Collection();
+  /**
+   * @type {Array<ole3.bezier.Curve>}
+   */
   this.beziers_ = [];
   this.handles_ = [];
 
   /**
    * All Handles of this BezierString
-   * @type {ol.structs.RBush<ole3.bezier.ControlPointProviderI>}
+   * @type {ole3.structs.RBush<ole3.bezier.ControlPointProviderI>}
    * @private
    */
-  this.rBush_ = new ol.structs.RBush();
+  this.rBush_ = new ole3.structs.RBush();
 
   var bezierDesc = this.feature_.get('bezier');
   if (!bezierDesc) {
@@ -982,12 +1002,12 @@ ole3.wrapper.BezierString.prototype.loadFromControlPoints_ = function(cps) {
 
 ole3.wrapper.BezierString.prototype.controlPointsForSegment_ =
     function(start, end) {
-  var diff = ol.coordinate.sub(end.slice(), start);
-  ol.coordinate.scale(diff, 1 / 3);
+  var diff = ole3.lib.olinternals.coordinate.sub(end.slice(), start);
+  ole3.lib.olinternals.coordinate.scale(diff, 1 / 3);
   return [
     start,
     ol.coordinate.add(start.slice(), diff),
-    ol.coordinate.sub(end.slice(), diff),
+    ole3.lib.olinternals.coordinate.sub(end.slice(), diff),
     end
   ];
 };

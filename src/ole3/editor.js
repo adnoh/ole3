@@ -16,8 +16,8 @@
 goog.provide('ole3.Editor');
 goog.provide('ole3.editor.Options');
 
-goog.require('ol.Collection');
-goog.require('ol.Map');
+// goog.require('ol.Collection');
+// goog.require('ol.Map');
 goog.require('ole3.control.ToolI');
 goog.require('ole3.control.Toolbar');
 /**
@@ -26,17 +26,18 @@ goog.require('ole3.control.Toolbar');
  *     tools: !ol.Collection<ole3.control.ToolI>
  * }}
  */
-ole3.editor.Options;
+ole3.editor.Options = {};
 
 /**
  * ole3 editor class
  * @constructor
  * @param {ole3.editor.Options} options Editor configuration.
+ * @export
  */
 ole3.Editor = function(options) {
-    this.map_ = options.map;
+    this.map_ = options['map'];
     this.toolbar_ = new ole3.control.Toolbar({
-        tools: options.tools
+        tools: options['tools']
     });
     this.map_.addControl(this.toolbar_);
 };

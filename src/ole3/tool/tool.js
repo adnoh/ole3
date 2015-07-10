@@ -3,6 +3,7 @@ goog.provide('ole3.tool.Tool');
 
 goog.require('goog.dom');
 goog.require('goog.events');
+goog.require('goog.events.EventTarget');
 goog.require('goog.object');
 goog.require('ole3.control.ToolI');
 

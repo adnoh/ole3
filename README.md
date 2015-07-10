@@ -53,3 +53,4 @@ npm run-script serve
 ```
 
 Page accessible under localhost:3000
+Debug mode with localhost:3000/?debug
