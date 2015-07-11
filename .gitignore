@@ -1,4 +1,3 @@
 node_modules/**/*
 generatedDeps/**/*
-dist/**/*
 src/deps.js
