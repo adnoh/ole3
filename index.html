@@ -19,6 +19,8 @@
   </head>
   <body onload="main()">
     <div id="map"></div>
+    <button onclick="addBezierTool()">Add Bezieredit</button>
+    <button onclick="removeBezierTool()">Remove Bezieredit</button>
     <script type="text/javascript">
       var main = function() {
         /**
@@ -52,13 +54,24 @@
         /**
          * Generate two tools.
          */
-
-        var beziertool = new ole3.tool.BezierEdit({
-            features: new ol.Collection(src.getFeatures())
-        });
         var modifytool = new ole3.tool.Modify({
             features: new ol.Collection(src.getFeatures())
         });
+
+        var beziertools = [];
+        window.addBezierTool = function() {
+          var beziertool = new ole3.tool.BezierEdit({
+            features: new ol.Collection(src.getFeatures())
+          });
+          editor.addTool(beziertool);
+          beziertools.push(beziertool);
+        };
+        window.removeBezierTool = function() {
+          var beziertool = beziertools.pop();
+          if (beziertool) {
+            editor.removeTool(beziertool);
+          }
+        };
 
         /**
          * Add ole3.Editor to map
@@ -66,7 +79,7 @@
 
         var editor = new ole3.Editor({
           map: map,
-          tools: new ol.Collection([beziertool, modifytool])
+          tools: [modifytool]
         });
       };
     </script>

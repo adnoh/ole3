@@ -22,8 +22,8 @@ goog.require('ole3.control.ToolI');
 goog.require('ole3.control.Toolbar');
 /**
  * @typedef {{
- *     map: !ol.Map,
- *     tools: !ol.Collection<ole3.control.ToolI>
+ *     map: (?ol.Map|undefined),
+ *     tools: (?Array<ole3.control.ToolI>|undefined)
  * }}
  */
 ole3.editor.Options = {};
@@ -31,13 +31,44 @@ ole3.editor.Options = {};
 /**
  * ole3 editor class
  * @constructor
- * @param {ole3.editor.Options} options Editor configuration.
+ * @param {ole3.editor.Options=} opt_options Editor configuration.
  * @export
  */
-ole3.Editor = function(options) {
-    this.map_ = options['map'];
+ole3.Editor = function(opt_options) {
+    var options = opt_options || {};
     this.toolbar_ = new ole3.control.Toolbar({
         tools: options['tools']
     });
-    this.map_.addControl(this.toolbar_);
+    this.setMap(options['map']);
+};
+
+/**
+ * Set the map for this Editor.
+ * @param {?ol.Map} map Map
+ * @export
+ */
+ole3.Editor.prototype.setMap = function(map) {
+    if (goog.isDefAndNotNull(this.map_)) {
+        this.map_.removeControl(this.toolbar_);
+    }
+    this.map_ = map;
+    if (goog.isDef(map)) { this.map_.addControl(this.toolbar_); }
+};
+
+/**
+ * Add a tool to this Editor.
+ * @param {ole3.control.ToolI} tool Tool to add
+ * @export
+ */
+ole3.Editor.prototype.addTool = function(tool) {
+    this.toolbar_.addTool(tool);
+};
+
+/**
+ * Remove a tool from this Editor.
+ * @param  {ole3.control.ToolI} tool Tool to remove
+ * @export
+ */
+ole3.Editor.prototype.removeTool = function(tool) {
+    this.toolbar_.removeTool(tool);
 };
