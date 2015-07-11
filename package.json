@@ -16,12 +16,13 @@
   "author": "Jan Vogt | geOps",
   "license": "license.txt",
   "dependencies": {
-    "openlayers": "~3.5.0",
+    "async": "^1.3.0",
     "bezier-js": "~1.0.4",
-    "google-closure-library": "~20150609.0.0",
     "closure-compiler": "~0.2.6",
     "glob": "~5.0.13",
     "google-closure-compiler": "~20150609.0.0",
+    "google-closure-library": "~20150609.0.0",
+    "openlayers": "~3.5.0",
     "rbush": "~1.4.0"
   },
   "config": {
