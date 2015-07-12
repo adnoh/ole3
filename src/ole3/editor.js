@@ -61,7 +61,12 @@ ole3.Editor.prototype.setMap = function(map) {
  * @export
  */
 ole3.Editor.prototype.addTool = function(tool) {
-    this.toolbar_.addTool(tool);
+    // closure compiler generates code that addTool function is set as
+    // null on the Toolbar object itself. So the actual implementation on
+    // the prototype gets shadowed out. Calling the function directly on the
+    // prototype fixes this for now. But it es another (or the same) wierd
+    // behaviour of closure compiler in advanced mode.
+    ole3.control.Toolbar.prototype.addTool.call(this.toolbar_, tool);
 };
 
 /**
