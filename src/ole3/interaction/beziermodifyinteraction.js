@@ -82,13 +82,21 @@ ole3.interaction.BezierModify = function(options) {
       options.pixelTolerance : 10;
 
   /**
-   * Draw overlay where are sketch features are drawn.
-   * @type {ol.FeatureOverlay}
+   * Source for handle features.
+   * @type {ol.source.Vector}
    * @private
    */
-  this.overlay_ = new ol.FeatureOverlay();
-  this.overlay_.setStyle(goog.isDef(options.style) ? options.style :
-        ole3.interaction.BezierModify.getDefaultStyleFunction())
+  this.handleSource_ = new ol.source.Vector();
+
+  /**
+   * Layer for handle Features.
+   * @type {ol.layer.Vector}
+   * @private
+   */
+  this.handleLayer_ = new ol.layer.Vector();
+  this.handleLayer_.setStyle(goog.isDef(options.style) ? options.style :
+        ole3.interaction.BezierModify.getDefaultStyleFunction());
+  this.handleLayer_.setSource(this.handleSource_);
 
   /**
   * @const
@@ -147,8 +155,7 @@ ole3.interaction.BezierModify.prototype.removeFeature_ =
   });
   for (i = bezierStringsToRemove.length; i > 0; --i) {
     goog.array.map(bezierStringsToRemove[i].getHandleFeatures(),
-        this.overlay_.removeFeature,
-        this.overlay_);
+        this.removeHandle_, this);
     rBush.remove(bezierStringsToRemove[i]);
   }
 };
@@ -174,7 +181,7 @@ ole3.interaction.BezierModify.prototype.handleFeatureRemove_ = function(evt) {
   // There remains only vertexFeature…
   if (!goog.isNull(this.vertexFeature_) &&
       this.features_.getLength() === 0) {
-    this.overlay_.removeFeature(this.vertexFeature_);
+    this.removeHandle_(this.vertexFeature_);
     this.vertexFeature_ = null;
   }
 };
@@ -244,7 +251,7 @@ ole3.interaction.BezierModify.prototype.updateVertexFeature_ =
   var vtx = this.vertexFeature_;
   if (goog.isNull(cp)) {
     if (!goog.isNull(vtx)) {
-      this.overlay_.removeFeature(vtx);
+      this.removeHandle_(vtx);
       this.vertexFeature_ = null;
     }
     return;
@@ -252,7 +259,7 @@ ole3.interaction.BezierModify.prototype.updateVertexFeature_ =
   if (goog.isNull(vtx)) {
     vtx = new ol.Feature(new ol.geom.Point(cp.getCoordinate()));
     this.vertexFeature_ = vtx;
-    this.overlay_.addFeature(vtx);
+    this.addHandle_(vtx);
   } else {
     var geometry = /** @type {ol.geom.Point} */ (vtx.getGeometry());
     geometry.setCoordinates(cp.getCoordinate());
@@ -287,15 +294,20 @@ ole3.interaction.BezierModify.prototype.indexBezierString_ = function(bezierStri
 
 
 ole3.interaction.BezierModify.prototype.addHandle_ = function(handle) {
-  this.overlay_.addFeature(handle);
+  this.handleSource_.addFeature(handle);
 };
+
+ole3.interaction.BezierModify.prototype.removeHandle_ = function(handle) {
+  this.handleSource_.removeFeature(handle);
+};
+
 
 ole3.interaction.BezierModify.prototype.handleAddHandle_ = function(evt) {
   this.addHandle_(evt.element);
 };
 
 ole3.interaction.BezierModify.prototype.handleRemoveHandle_ = function(evt) {
-  this.overlay_.removeFeature(evt.element);
+   this.removeHandle_(evt.element);
 };
 
 /**
@@ -351,8 +363,13 @@ ole3.interaction.BezierModify.prototype.handleUpEvent_ = function(evt) {
 };
 
 ole3.interaction.BezierModify.prototype.setMap = function(map) {
-  this.overlay_.setMap(map);
+  if (goog.isDefAndNotNull(this.map_)) {
+    this.map_.removeLayer(this.handleLayer_);
+  }
   this.map_ = map;
+  if (goog.isDefAndNotNull(map)) {
+    map.addLayer(this.handleLayer_);
+  }
 };
 
 /**
