@@ -1,3 +1,4 @@
 node_modules/**/*
 generatedDeps/**/*
 src/deps.js
+dist/**/*.js

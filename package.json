@@ -5,9 +5,10 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "postinstall": "node ./scripts/closurify-deps.js; node ./scripts/generate-ol-externs.js",
+    "postinstall": "node ./scripts/closurify-deps.js && node ./scripts/generate-ol-externs.js && npm run deps && npm run build",
     "serve": "node ./scripts/serve.js",
-    "build": "node ./scripts/compile.js"
+    "build": "node ./scripts/compile.js",
+    "deps": "node ./scripts/deps-writer.js"
   },
   "repository": {
     "type": "git",
