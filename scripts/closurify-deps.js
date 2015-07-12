@@ -3,6 +3,7 @@ var p = require('path');
 var pjson = require(p.resolve('./package.json'));
 var nonClosureDeps = pjson.config.nonClosureDeps;
 var closureDepsFolder = './generatedDeps';
+var utils = require('./utils.js');
 
 var filename = function(namespace) {
     var subtree = namespace.split('.');
@@ -35,7 +36,7 @@ var closureify = function(namespace) {
     var footer = namespace + '.' + obj + '=window.' + obj + ';}());';
     // var footer = namespace + ' = window.' + nonClosureDeps[namespace].obj + ';\n';
     var fixes = nonClosureDeps[namespace].fixes || {};
-    fs.readFile(nonClosureDeps[namespace].path, 'utf8', function(err, data) {
+    fs.readFile(utils.resolvePath(nonClosureDeps[namespace].path), 'utf8', function(err, data) {
         if (err) {
             console.log(err);
             return;

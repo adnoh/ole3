@@ -30,7 +30,7 @@
   "config": {
     "nonClosureDeps": {
       "pomax": {
-        "path": "./node_modules/bezier-js/lib/bezier.js",
+        "path": ["bezier-js", "bezier.js"],
         "obj": "Bezier",
         "fixes": {
           "\\},(\\s+)\\}": "}$1}",
@@ -47,7 +47,7 @@
         }
       },
       "mourner": {
-        "path": "./node_modules/rbush/rbush.js",
+        "path": ["rbush", "rbush.js"],
         "obj": "rbush",
         "fixes": {
           "if \\(typeof define(.*\\s*){3}else ": "",
@@ -60,17 +60,17 @@
     },
     "libs": {
       "openlayers": {
-        "distjs": "node_modules/openlayers/dist/ol.js",
-        "js": "node_modules/openlayers/src/ol/**/*.js",
-        "css": "node_modules/openlayers/dist/ol.css",
+        "distjs": ["openlayers", "ol.js"],
+        "js": ["openlayers", "../src/ol/**/*.js"],
+        "css": ["openlayers", "ol.css"],
         "externs": [
           "externs/openlayers/ol.js",
           "node_modules/openlayers/externs/esrijson.js"
         ]
       },
       "closure": {
-        "distjs": "node_modules/google-closure-library/closure/goog/base.js",
-        "js": "node_modules/google-closure-library/closure/**/!(*_test).js"
+        "distjs": ["google-closure-library", "base.js"],
+        "js": ["google-closure-library", "../../closure/**/!(*_test).js"]
       },
       "pomax": {
         "js": "generatedDeps/pomax.js"

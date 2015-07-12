@@ -1,17 +1,11 @@
 goog.provide('ole3.interaction.BezierModify');
 
 goog.require('goog.functions');
-// goog.require('ol.Collection');
 goog.require('ole3.lib.olinternals.CollectionEventType');
 goog.require('ole3.lib.olinternals.MapBrowserEvent.EventType');
-goog.require('ole3.lib.olinternals.style');
-goog.require('ole3.lib.olinternals.geom.GeometryType');
 goog.require('ole3.lib.olinternals.coordinate');
-// goog.require('ol.Feature');
-// goog.require('ol.FeatureOverlay');
-// goog.require('ol.events.condition');
-// goog.require('ol.geom.Point');
-// goog.require('ol.interaction.Pointer');
+goog.require('ole3.lib.olinternals.geom.GeometryType');
+goog.require('ole3.lib.olinternals.style');
 goog.require('ole3.structs.RBush');
 goog.require('ole3.wrapper.BezierString');
 
@@ -51,12 +45,14 @@ ole3.interaction.BezierModify = function(options) {
 
   /**
    * Wether a curve is currently edited.
+   * @private
    */
   this.isDragging_ = false;
 
   /**
    * If something changed during the current drag.
    * @type {boolean}
+   * @private
    */
   this.hasDragged_ = false;
 
@@ -156,15 +152,6 @@ ole3.interaction.BezierModify.prototype.removeFeature_ =
     rBush.remove(bezierStringsToRemove[i]);
   }
 };
-
-// /**
-//  * @inheritDoc
-//  */
-// ole3.interaction.BezierModify.prototype.setMap = function(map) {
-//   this.overlay_.setMap(map);
-//   this.map_ = map;
-//   goog.base(this, 'setMap', map);
-// };
 
 /**
  * @param {ol.CollectionEvent} evt Event.

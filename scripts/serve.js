@@ -22,7 +22,7 @@ var handleIndex = function(res, isDebug) {
 
 var includes = function(index, isDebug) {
     var css = opts.css.map(function(css) {
-        return '$1  <link rel="stylesheet" src="' + css + '">\n';
+        return '$1  <link rel="stylesheet" href="' + css + '">\n';
     });
     var js = opts.dynamic;
     js = isDebug ? js.concat(writeDeps(opts.statics)) : js.concat(opts.dist);

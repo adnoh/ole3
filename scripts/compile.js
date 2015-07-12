@@ -4,7 +4,8 @@ var p = require('path');
 var resolve = p.resolve.bind(p, __dirname);
 var fs = require('fs');
 var options = require('./config.js').getCompileOptions();
-options['jar'] = resolve('../node_modules/google-closure-compiler/compiler.jar');
+var utils = require('./utils.js');
+options['jar'] = utils.relInPackage('google-closure-compiler', 'compiler.jar');
 
 var mkdirs = function(path) {
     var dirname = p.dirname(path);

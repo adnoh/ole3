@@ -2,11 +2,12 @@ var p = require('path');
 var pjson = require(p.resolve('./package.json'));
 var glob = require('glob');
 var resolve = p.resolve.bind(p, __dirname);
+var utils = require('./utils.js');
 
 var getCss = function() {
     var css = [];
     return Object.keys(pjson.config.libs).map(function(key) {
-        return pjson.config.libs[key].css;
+        return utils.resolvePath(pjson.config.libs[key].css);
     }).filter(function(css) {return !!css; });
 };
 
@@ -36,7 +37,7 @@ var flatten = function(arr) {
 
 var getStatics = function() {
     var statics = getRelativeDistJs(pjson.config.compile.statics);
-    statics.push.apply(statics, resolveGlobsRelative(pjson.config.js));
+    statics.push.apply(statics, resolveGlobsRelative(pjson.config.js.map(utils.resolvePath)));
     return statics;
 };
 
@@ -46,9 +47,9 @@ var getDynamics = function() {
 
 var getRelativeDistJs = function(libs) {
     jsGlobs = libs.map(function(key) {
-        lib = pjson.config.libs[key];
-        if (lib.distjs) { return lib.distjs; }
-        return lib.js;
+        var lib = pjson.config.libs[key];
+        var res = lib.distjs || lib.js;
+        return utils.resolvePath(res);
     });
     return resolveGlobsRelative(jsGlobs);
 };
@@ -56,7 +57,7 @@ var getRelativeDistJs = function(libs) {
 var getAbsoluteJs = function(libs) {
     jsGlobs = libs.map(function(key) {
         lib = pjson.config.libs[key];
-        return lib.js;
+        return utils.resolvePath(lib.js);
     });
     return globArray(jsGlobs);
 };
@@ -64,26 +65,27 @@ var getAbsoluteJs = function(libs) {
 var getAbsoluteExtern = function(libs) {
     jsGlobs = libs.map(function(key) {
         lib = pjson.config.libs[key];
-        return lib.externs;
+        return lib.externs.map(utils.resolvePath);
     });
     return globArray(flatten(jsGlobs));
 };
 
 var resolveGlobsRelative = function(globs) {
     return globArray(globs).map(function(absPath) {
-        return absPath.replace(resolve('../') + '/', '');
+        return p.relative(resolve('../'), absPath);
     });
 };
 
 var getServerOptions = function() {
-    return {
+    var opts = {
         dynamic: getDynamics(),
         statics: getStatics(),
         css: getCss(),
-        dist: pjson.config.dist,
-        deps: pjson.config.deps,
-        main: pjson.config.main
+        dist: utils.resolvePath(pjson.config.dist),
+        deps: utils.resolvePath(pjson.config.deps),
+        main: utils.resolvePath(pjson.config.main)
     };
+    return opts;
 };
 
 var getCompileOptions = function() {
@@ -93,9 +95,9 @@ var getCompileOptions = function() {
     externs = opt.externs;
     delete opt.externs;
     opt.js = getAbsoluteJs(statics);
-    opt.js.push.apply(opt.js, globArray(pjson.config.js));
-    opt.externs = getAbsoluteExtern(externs);
-    opt.js_output_file = resolve(p.join('..', pjson.config.dist));
+    opt.js.push.apply(opt.js, globArray(pjson.config.js.map(utils.resolvePath)));
+    opt.externs = getAbsoluteExtern(externs.map(utils.resolvePath));
+    opt.js_output_file = resolve(p.join('..', utils.resolvePath(pjson.config.dist)));
     return opt;
 };
 
