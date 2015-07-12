@@ -17,7 +17,7 @@ var writeDeps = function(statics) {
     var staticsSansBase = statics.slice();
     var base = staticsSansBase.splice(ind, 1).concat(opts.deps);
     staticsSansBase = staticsSansBase.map(function(f) {
-        return '--path_with_depspath=' + f + ' ' + p.relative(utils.relInPackage('google-closure-library', '.'), resolve('../')) + f;
+        return '--path_with_depspath=' + f + ' ' + p.join(p.relative(utils.relInPackage('google-closure-library', '.'), resolve('../')), f);
     });
     res = depswriter(staticsSansBase, {cwd: resolve('..')});
     if (res.status !== 0) {
