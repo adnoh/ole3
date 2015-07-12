@@ -20,6 +20,7 @@
     <div id="map"></div>
     <button onclick="addBezierTool()">Add Bezieredit</button>
     <button onclick="removeBezierTool()">Remove Bezieredit</button>
+    <button onclick="moveBegin()">Bezier Move</button>
     <script type="text/javascript">
       var main = function() {
         /**
@@ -70,6 +71,15 @@
           if (beziertool) {
             editor.removeTool(beziertool);
           }
+        };
+        window.moveBegin = function() {
+          var feat = features[0];
+          var bezierWrapped = new ole3.wrapper.BezierString(feat);
+          var start = feat.getGeometry().getCoordinates()[0];
+          start[0] += 1679576;
+          start[1] -= 1679576;
+          var handles = bezierWrapped.getControlPoints();
+          handles[0].moveTo(start);
         };
 
         /**

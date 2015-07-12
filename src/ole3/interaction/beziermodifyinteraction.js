@@ -273,7 +273,8 @@ ole3.interaction.BezierModify.prototype.updateVertexFeature_ =
  */
 ole3.interaction.BezierModify.prototype.writeLineStringGeometry_ =
     function(feature, geometry) {
-  var bezierString = new ole3.wrapper.BezierString(feature);
+  // By default boundary points can't be edited.
+  var bezierString = new ole3.wrapper.BezierString(feature, false);
   var handles = bezierString.getHandleFeatures();
   handles.forEach(this.addHandle_, this);
   handles.on(ole3.lib.olinternals.CollectionEventType.ADD,

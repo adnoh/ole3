@@ -12,12 +12,7 @@ goog.provide('ole3.wrapper.BezierString');
 goog.require('goog.array');
 goog.require('goog.functions');
 goog.require('goog.object');
-// goog.require('ol.Collection');
-// goog.require('ol.Feature');
-// goog.require('ol.Object');
 goog.require('ole3.lib.olinternals.coordinate');
-// goog.require('ol.extent');
-// goog.require('ol.geom.LineString');
 goog.require('ole3.structs.RBush');
 goog.require('pomax');
 
@@ -52,6 +47,7 @@ ole3.bezier.ControlPointType = {
 /**
  * A movable point handle.
  * @interface
+ * @export
  */
 ole3.bezier.ControlPointI = function() {};
 /**
@@ -59,6 +55,7 @@ ole3.bezier.ControlPointI = function() {};
  * @param {ol.Coordinate} coordinate Coordinate to move to.
  * @return {ole3.bezier.ControlPointI}
  *         A new handle point replacing this one. Can be different.
+ * @export
  */
 ole3.bezier.ControlPointI.prototype.moveTo = function(coordinate) {};
 /**
@@ -280,6 +277,11 @@ ole3.bezier.Control.prototype.getHandles = function() {
 ole3.bezier.Control.prototype.getClosestHandlePoint =
     function(coordinate) {
   var cps = this.getControlPoints();
+  if (!this.bezierS_.getBoundariesActive() &&
+        (!goog.isDefAndNotNull(this.left_) ||
+         !goog.isDefAndNotNull(this.right_))) {
+    delete cps[ole3.bezier.ControlPointType.MAIN];
+  }
   var reduce = goog.array.reduce;
   var keys = goog.array.map(goog.object.getKeys(cps),
       function(k) {
@@ -662,6 +664,7 @@ ole3.bezier.Curve.prototype.toBezierJSCoord_ = function(coordinate) {
  * [fromBezierJSCoord_ description]
  * @param  {{x: number, y: number}} bezierJSCoord [description]
  * @return {ol.Coordinate}               [description]
+ * @private
  */
 ole3.bezier.Curve.prototype.fromBezierJSCoord_ = function(bezierJSCoord) {
   return [bezierJSCoord.x, bezierJSCoord.y];
@@ -755,9 +758,12 @@ ole3.bezier.CurvePoint.prototype.getBezierString = function() {
 /**
  * BezierString wraps a feature with LineString geometry as bezier curve
  * @param {ol.Feature} feature Feature to be wrapped.
+ * @param {boolean=} isBoundaryPointActive
+ *        Wether boundary points should be movable.
  * @constructor
+ * @export
  */
-ole3.wrapper.BezierString = function(feature) {
+ole3.wrapper.BezierString = function(feature, isBoundaryPointActive) {
   this.feature_ = feature;
   goog.asserts.assertInstanceof(this.feature_, ol.Feature,
       'feature must be an ol.Feature');
@@ -765,6 +771,7 @@ ole3.wrapper.BezierString = function(feature) {
   this.handleFeatures_ = new ol.Collection();
   /**
    * @type {Array<ole3.bezier.Curve>}
+   * @private
    */
   this.beziers_ = [];
   this.handles_ = [];
@@ -781,6 +788,27 @@ ole3.wrapper.BezierString = function(feature) {
     bezierDesc = this.bezierifyLineString_();
   }
   this.loadFromControlPoints_(bezierDesc);
+  this.boundariesActive_ = goog.isDef(isBoundaryPointActive) ?
+      isBoundaryPointActive : true;
+};
+
+/**
+ * Should boundaries be found as ControlPoint
+ * @return {boolean} Wether boundary points should be movable.
+ */
+ole3.wrapper.BezierString.prototype.getBoundariesActive = function() {
+  return this.boundariesActive_;
+};
+
+/**
+ * Get a ole3.bezier.ControlPoints for all Begin and end points of beziercurves.
+ * @return {Array<ole3.bezier.ControlPointI>} Control Points
+ * @export
+ */
+ole3.wrapper.BezierString.prototype.getControlPoints = function() {
+  return goog.array.map(this.handles_, function(handle) {
+    return handle.mainHandlePoint();
+  });
 };
 
 /**
