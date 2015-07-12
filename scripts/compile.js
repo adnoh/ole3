@@ -22,5 +22,6 @@ var afterCompile = function(err, stdout, stderr) {
 };
 
 process.chdir(resolve('../'));
+mkdirs(p.dirname(options.js_output_file))
 
 cc.compile(null, options, afterCompile);
