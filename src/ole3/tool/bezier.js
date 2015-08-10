@@ -9,35 +9,24 @@
 goog.provide('ole3.tool.BezierEdit');
 
 goog.require('ole3.interaction.BezierModify');
-goog.require('ole3.tool.Tool');
+goog.require('ole3.tool.Interaction');
+goog.require('goog.object');
 
 /**
  * Tool for editing features as bezier curves.
  * @param {olx.interaction.ModifyOptions} options
  *        Must include features to be editable.
  * @constructor
- * @extends {ole3.tool.Tool}
+ * @extends {ole3.tool.Interaction}
  * @export
  */
 ole3.tool.BezierEdit = function(options) {
-    this.opt_ = options;
-    this.interaction_ = null;
     var superOpts = {
-        enableHandler: goog.bind(this.handleEnable_, this),
-        disableHandler: goog.bind(this.handleDisable_, this),
         label: 'B',
         tooltip: 'Modify features as bezier curves'
     };
-    goog.base(this, superOpts);
-};
-goog.inherits(ole3.tool.BezierEdit, ole3.tool.Tool);
-
-ole3.tool.BezierEdit.prototype.handleEnable_ = function(map) {
-    this.interaction_ = new ole3.interaction.BezierModify(this.opt_);
-    map.addInteraction(this.interaction_);
+    goog.object.extend(superOpts, options);
+    goog.base(this, ole3.interaction.BezierModify, superOpts);
 };
 
-ole3.tool.BezierEdit.prototype.handleDisable_ = function(map) {
-    map.removeInteraction(this.interaction_);
-    this.interaction_ = null;
-};
+goog.inherits(ole3.tool.BezierEdit, ole3.tool.Interaction);

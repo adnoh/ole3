@@ -1,3 +1,10 @@
+/**
+ * Base class for interaction tools.
+ * @copyright 2015 geOps e.K.
+ * @license http://www.gnu.org/licenses/old-licenses/gpl-2.0
+ *          GNU General Public License v2
+ */
+
 goog.provide('ole3.tool.Interaction');
 
 goog.require('goog.object');
@@ -13,7 +20,6 @@ goog.require('ole3.tool.Tool');
  * @extends {ole3.tool.Tool}
  */
 ole3.tool.Interaction = function(interaction, options) {
-    this.interactionCtor_ = interaction;
     var superOpts = {
         enableHandler: goog.bind(this.handleEnable_, this),
         disableHandler: goog.bind(this.handleDisable_, this)
@@ -28,7 +34,7 @@ ole3.tool.Interaction = function(interaction, options) {
     }
     goog.base(this, superOpts);
 
-    this.interaction_ = new this.interactionCtor_(options);
+    this.interaction_ = new interaction(options);
 };
 
 goog.inherits(ole3.tool.Interaction, ole3.tool.Tool);
