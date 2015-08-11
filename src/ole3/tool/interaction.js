@@ -18,6 +18,7 @@ goog.require('ole3.tool.Tool');
  *        Must include features to be editable.
  * @constructor
  * @extends {ole3.tool.Tool}
+ * @export
  */
 ole3.tool.Interaction = function(interaction, options) {
     var superOpts = {
@@ -45,4 +46,13 @@ ole3.tool.Interaction.prototype.handleEnable_ = function(map) {
 
 ole3.tool.Interaction.prototype.handleDisable_ = function(map) {
     map.removeInteraction(this.interaction_);
+};
+
+/**
+ * Get the tool's interaction
+ * @return {ol.interaction.Interaction} Interaction.
+ * @export
+ */
+ole3.tool.Interaction.prototype.getInteraction = function() {
+    return this.interaction_;
 };
