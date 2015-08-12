@@ -32,7 +32,12 @@ ole3.control.ToolI = function() {};
 ole3.control.ToolI.prototype.getElement = function() {};
 
 /**
- * Disable this Tool.
+ * Enable this tool.
+ */
+ole3.control.ToolI.prototype.enable = function() {};
+
+/**
+ * Disable this tool.
  */
 ole3.control.ToolI.prototype.disable = function() {};
 

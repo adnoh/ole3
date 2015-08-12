@@ -54,25 +54,33 @@ ole3.tool.Tool.prototype.getElement = function() {
  * @private
  */
 ole3.tool.Tool.prototype.handleClick_ = function(evt) {
-    if (goog.isNull(this.map_)) { return; }
-    var evtT = this.active_ ? ole3.control.ToolEventTypes.WILL_DISABLE :
-            ole3.control.ToolEventTypes.WILL_ENABLE;
-    if (!goog.events.dispatchEvent(this, evtT)) {
-        return;
+    if (this.active_) {
+        this.disable();
+    } else {
+        this.enable();
     }
-    var handler = this.active_ ? this.disableHandler_ : this.enableHandler_;
-    handler(this.map_);
-    this.active_ = !this.active_;
+};
+
+/**
+ * @inheritDoc
+ */
+ole3.tool.Tool.prototype.enable = function() {
+    if (this.map_ && !this.active_) {
+        goog.events.dispatchEvent(this, ole3.control.ToolEventTypes.WILL_ENABLE);
+        this.enableHandler_(this.map_);
+        this.active_ = true;
+    }
 };
 
 /**
  * @inheritDoc
  */
 ole3.tool.Tool.prototype.disable = function() {
-    if (goog.isNull(this.map_)) { return; }
-    goog.events.dispatchEvent(this, ole3.control.ToolEventTypes.WILL_DISABLE);
-    this.disableHandler_(this.map_);
-    this.active_ = false;
+    if (this.map_ && this.active_) {
+        goog.events.dispatchEvent(this, ole3.control.ToolEventTypes.WILL_DISABLE);
+        this.disableHandler_(this.map_);
+        this.active_ = false;
+    }
 };
 
 /**
